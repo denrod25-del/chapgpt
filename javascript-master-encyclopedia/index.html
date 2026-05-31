@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JavaScript Master Encyclopedia</title>
+<style>
+:root{--bg:#0b1020;--panel:#111832;--text:#f5f7ff;--muted:#b9c2da;--line:#34405f;--a:#63d2ff;--b:#8cffb5;--c:#ffd36a;--d:#d69cff}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#0b1020,#171b35);color:var(--text);line-height:1.55}header{padding:56px 28px 32px;max-width:1180px;margin:auto}h1{font-size:clamp(2.2rem,6vw,5rem);line-height:1;margin:0 0 16px}.subtitle{font-size:1.2rem;color:var(--muted);max-width:850px}nav{position:sticky;top:0;z-index:5;background:rgba(11,16,32,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}nav div{max-width:1180px;margin:auto;padding:12px 24px;display:flex;gap:10px;flex-wrap:wrap}nav a{color:var(--text);text-decoration:none;border:1px solid var(--line);padding:6px 10px;border-radius:999px;font-size:.9rem}main{max-width:1180px;margin:auto;padding:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}.card{background:rgba(17,24,50,.88);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.25)}h2,h3{margin-top:0}p,li,td{color:var(--muted)}code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}pre{background:#050814;color:#e7f0ff;border:1px solid #263153;padding:14px;border-radius:14px;overflow:auto}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}th{color:var(--text)}.diagram{background:#081027;border:1px solid #263153;border-radius:16px;margin:12px 0;padding:8px;overflow:auto}svg{width:100%;height:auto;color:#f5f7ff}.box{fill:#0d1530;stroke:#34405f}.accent{fill:#12334a;stroke:var(--a)}.accent2{fill:#17351f;stroke:var(--b)}.accent3{fill:#3b3014;stroke:var(--c)}.accent4{fill:#2c1f42;stroke:var(--d)}text{fill:#f5f7ff;font-size:18px}.line{fill:none;stroke:#f5f7ff;stroke-width:3}footer{max-width:1180px;margin:20px auto 60px;padding:24px;color:var(--muted)}.wide{grid-column:1/-1}@media print{body{background:white;color:#111}.card,nav{break-inside:avoid}nav{display:none}.card{background:white;color:#111}p,li,td{color:#333}pre{white-space:pre-wrap}}
+</style>
+</head>
+<body>
+<header><h1>JavaScript Master Encyclopedia</h1><p class="subtitle">An expanded, visual reference for modern JavaScript: language fundamentals, runtime behavior, browser and server APIs, async programming, patterns, security, tooling, and cheatsheets.</p></header>
+<nav><div><a href="#s0">Foundations</a><a href="#s1">Syntax & Values</a><a href="#s2">Event Loop</a><a href="#s3">Functions</a><a href="#s4">Objects</a><a href="#s5">Collections</a><a href="#s6">Modules</a><a href="#s7">Async</a><a href="#s8">DOM</a><a href="#s9">Security</a></div></nav>
+<main>
+<section class="card wide"><h2>How to Use This Encyclopedia</h2><p>Read the foundation cards first, then jump by topic. Each card gives the mental model, practical rules, and compact examples. Use the diagrams for memory anchors and the tables as quick decision guides.</p></section>
+<section id="s0" class="card wide"><h3>Mental Model</h3><p>JavaScript is a dynamically typed, garbage-collected, prototype-based language. The core language is standardized as ECMAScript; browsers, Node.js, Deno, and Bun add host APIs such as DOM, networking, files, timers, and streams.</p><div class="diagram"><svg viewBox="0 0 840 220" role="img" aria-label="JavaScript layers diagram"><rect x="30" y="30" width="780" height="160" rx="18" class="box"/><rect x="70" y="70" width="200" height="80" rx="14" class="accent"/><text x="170" y="116" text-anchor="middle">ECMAScript Core</text><rect x="320" y="70" width="200" height="80" rx="14" class="accent2"/><text x="420" y="106" text-anchor="middle">Browser APIs</text><text x="420" y="128" text-anchor="middle">DOM • fetch • storage</text><rect x="570" y="70" width="200" height="80" rx="14" class="accent3"/><text x="670" y="106" text-anchor="middle">Server APIs</text><text x="670" y="128" text-anchor="middle">fs • streams • process</text></svg></div></section>
+<section id="s1" class="card wide"><h3>Types at a Glance</h3><table><tr><th>Category</th><th>Values</th><th>Notes</th></tr><tr><td>Primitives</td><td>undefined, null, boolean, number, bigint, string, symbol</td><td>Immutable values; compared mostly by value.</td></tr><tr><td>Objects</td><td>object, array, function, date, regex, map, set</td><td>Mutable references; compared by identity.</td></tr><tr><td>Special numbers</td><td>NaN, Infinity, -0</td><td>Use Number.isNaN; know Object.is for edge equality.</td></tr></table><pre><code>typeof undefined; // "undefined"
+typeof null;      // "object" historical quirk
+Array.isArray([]); // true
+Object.is(NaN, NaN); // true</code></pre></section>
+<section id="s2" class="card wide"><h3>Execution Model & Event Loop</h3><p>JavaScript usually executes on one main thread. Synchronous code runs first, then microtasks such as promise reactions, then macrotasks such as timers and many host callbacks.</p><div class="diagram"><svg viewBox="0 0 900 260"><rect x="50" y="40" width="180" height="70" rx="12" class="accent"/><text x="140" y="82" text-anchor="middle">Call Stack</text><path d="M230 75 H330" marker-end="url(#arrow)" class="line"/><rect x="330" y="40" width="210" height="70" rx="12" class="accent2"/><text x="435" y="82" text-anchor="middle">Web/Runtime APIs</text><path d="M435 110 V155" marker-end="url(#arrow)" class="line"/><rect x="300" y="155" width="270" height="60" rx="12" class="accent3"/><text x="435" y="191" text-anchor="middle">Task Queue</text><rect x="620" y="40" width="230" height="70" rx="12" class="accent4"/><text x="735" y="82" text-anchor="middle">Microtask Queue</text><path d="M620 75 H540" marker-end="url(#arrow)" class="line"/><path d="M300 185 H140 V110" marker-end="url(#arrow)" class="line"/><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="currentColor"/></marker></defs></svg></div><pre><code>console.log('A');
+setTimeout(() => console.log('D'), 0);
+Promise.resolve().then(() => console.log('C'));
+console.log('B');
+// A, B, C, D</code></pre></section>
+<section id="s3" class="card"><h3>Functions, Scope, and Closures</h3><p>A closure is a function bundled with access to its lexical environment. Closures power private state, callbacks, factories, and many design patterns.</p><pre><code>function makeCounter() {
+  let count = 0;
+  return function increment() {
+    count += 1;
+    return count;
+  };
+}
+const next = makeCounter();
+next(); // 1
+next(); // 2</code></pre></section>
+<section id="s4" class="card"><h3>Objects, Prototypes, and Classes</h3><p>Objects can delegate property lookup to prototypes. Class syntax is mostly cleaner syntax over prototypes, with modern additions like private fields.</p><pre><code>class Pipe {
+  #pressure = 0;
+  constructor(material) { this.material = material; }
+  setPressure(psi) { this.#pressure = psi; }
+  get safe() { return this.#pressure < 80; }
+}
+const p = new Pipe('copper');
+p.setPressure(60);
+p.safe; // true</code></pre></section>
+<section id="s5" class="card"><h3>Arrays and Collections</h3><table><tr><th>Use</th><th>Best choice</th><th>Why</th></tr><tr><td>Ordered list</td><td>Array</td><td>map/filter/reduce, index access</td></tr><tr><td>Unique values</td><td>Set</td><td>Fast membership, no duplicates</td></tr><tr><td>Key-value lookup</td><td>Map</td><td>Any key type, preserves insertion order</td></tr><tr><td>Private metadata</td><td>WeakMap</td><td>Does not prevent garbage collection</td></tr></table><pre><code>const jobs = ['rough-in', 'inspection', 'finish'];
+const done = new Set(['rough-in']);
+const cost = new Map([['copper', 120], ['pvc', 45]]);
+jobs.filter(job => !done.has(job)); // ['inspection', 'finish']</code></pre></section>
+<section id="s6" class="card"><h3>Modules</h3><p>ES modules use static import/export, support tree shaking, and allow top-level await in module contexts.</p><pre><code>// math.js
+export const add = (a, b) => a + b;
+export default function square(x) { return x * x; }
+
+// app.js
+import square, { add } from './math.js';
+console.log(square(add(2, 3)));</code></pre></section>
+<section id="s7" class="card"><h3>Promises and async/await</h3><p>A Promise represents eventual success or failure. async functions return promises; await pauses that function until fulfillment or rejection.</p><pre><code>async function loadUser(id, signal) {
+  const res = await fetch(`/api/users/${id}`, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+const controller = new AbortController();
+loadUser(42, controller.signal).catch(console.error);</code></pre></section>
+<section id="s8" class="card"><h3>DOM Events Visual</h3><p>Browser events travel through capture, target, and bubble phases. Event delegation listens higher in the tree and handles matching children.</p><div class="diagram"><svg viewBox="0 0 760 220"><circle cx="380" cy="40" r="30" class="accent"/><text x="380" y="46" text-anchor="middle">window</text><circle cx="380" cy="105" r="30" class="accent2"/><text x="380" y="111" text-anchor="middle">form</text><circle cx="380" cy="170" r="30" class="accent3"/><text x="380" y="176" text-anchor="middle">button</text><path d="M330 45 C220 70 220 140 330 165" class="line" marker-end="url(#arrow2)"/><text x="205" y="110">capture</text><path d="M430 165 C540 140 540 70 430 45" class="line" marker-end="url(#arrow2)"/><text x="545" y="110">bubble</text><defs><marker id="arrow2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="currentColor"/></marker></defs></svg></div><pre><code>document.querySelector('form').addEventListener('click', event => {
+  if (event.target.matches('button[data-action]')) {
+    console.log(event.target.dataset.action);
+  }
+});</code></pre></section>
+<section id="s9" class="card"><h3>Security Essentials</h3><table><tr><th>Risk</th><th>Rule</th><th>Example defense</th></tr><tr><td>XSS</td><td>Never inject untrusted HTML</td><td>Use textContent, sanitize trusted markup</td></tr><tr><td>Secrets</td><td>Never ship private keys to browser JS</td><td>Keep secrets on server</td></tr><tr><td>Dependencies</td><td>Audit packages and lock versions</td><td>npm audit, lockfiles, minimal deps</td></tr><tr><td>Fetch</td><td>Validate server responses</td><td>Schema validation and error handling</td></tr></table><pre><code>// Safer:
+element.textContent = userInput;
+
+// Risky with untrusted input:
+element.innerHTML = userInput;</code></pre></section>
+<section class="card"><h3>Testing Starter Pack</h3><p>Test pure functions heavily, integration paths selectively, and UI behavior from the user’s perspective.</p><pre><code>import { describe, it, expect } from 'vitest';
+function total(items) {
+  return items.reduce((sum, item) => sum + item.price, 0);
+}
+describe('total', () => {
+  it('adds item prices', () => {
+    expect(total([{ price: 5 }, { price: 7 }])).toBe(12);
+  });
+});</code></pre></section>
+<section class="card"><h3>Array Method Decision Map</h3><table><tr><th>Goal</th><th>Method</th><th>Returns</th></tr><tr><td>Transform each item</td><td>map</td><td>new array</td></tr><tr><td>Keep matching items</td><td>filter</td><td>new array</td></tr><tr><td>Find one item</td><td>find</td><td>item or undefined</td></tr><tr><td>Check all</td><td>every</td><td>boolean</td></tr><tr><td>Check any</td><td>some</td><td>boolean</td></tr><tr><td>Accumulate</td><td>reduce</td><td>any value</td></tr></table><pre><code>const invoices = [120, 80, 250];
+const taxable = invoices.filter(x => x > 100);
+const withTax = taxable.map(x => x * 1.07);
+const total = withTax.reduce((a, b) => a + b, 0);</code></pre></section>
+<section class="card"><h3>Regex Quick Reference</h3><table><tr><th>Pattern</th><th>Meaning</th></tr><tr><td>.</td><td>Any char except newline</td></tr><tr><td>\d</td><td>Digit</td></tr><tr><td>\w</td><td>Word char</td></tr><tr><td>+</td><td>One or more</td></tr><tr><td>*</td><td>Zero or more</td></tr><tr><td>?</td><td>Optional / lazy modifier</td></tr><tr><td>^ $</td><td>Start / end</td></tr><tr><td>(...)</td><td>Capture group</td></tr></table><pre><code>const phone = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
+phone.test('(555) 123-4567'); // true</code></pre></section>
+<section class="card"><h3>Index Topics</h3><ul><li>Foundations</li><li>Syntax and values</li><li>Control flow</li><li>Functions</li><li>Objects and prototypes</li><li>Collections</li><li>Modules</li><li>Async JavaScript</li><li>DOM and Browser APIs</li><li>Node.js and runtimes</li><li>Error handling</li><li>Performance</li><li>Security</li><li>Testing and tooling</li><li>Patterns</li><li>Reference cheatsheets</li></ul></section>
+</main>
+<footer><h2>Reference Notes</h2><p>Built as a recovered JavaScript learning website from ChatGPT project history. Last generated: 2026-05-02.</p></footer>
+</body>
+</html>
