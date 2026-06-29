@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SearXNG Privacy Search</title>
+<style>
+:root{--bg:#0f172a;--panel:#111c33;--card:#18233c;--text:#e5e7eb;--muted:#9ca3af;--accent:#38bdf8;--good:#22c55e;--line:rgba(255,255,255,.1)}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(135deg,#020617,#0f172a);color:var(--text);min-height:100vh}
+main{max-width:920px;margin:0 auto;padding:56px 22px 80px}
+.brand{display:flex;gap:14px;align-items:center;justify-content:center;margin-bottom:6px}
+.logo{width:54px;height:54px;border-radius:16px;background:var(--accent);color:#082f49;display:grid;place-items:center;font-weight:900;font-size:24px}
+h1{font-size:clamp(2rem,6vw,3.4rem);margin:0;text-align:center}
+.lead{color:var(--muted);text-align:center;max-width:620px;margin:10px auto 0;line-height:1.6}
+.searchbox{margin-top:34px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:24px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.cat{background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:99px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:600}
+.cat.active{border-color:var(--accent);background:rgba(56,189,248,.15);color:var(--accent)}
+.row{display:flex;gap:10px}
+#q{flex:1;background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:14px;padding:15px 16px;font-size:16px}
+#q:focus{outline:none;border-color:var(--accent)}
+.go{border:0;border-radius:14px;padding:0 22px;background:var(--accent);color:#082f49;font-weight:800;font-size:16px;cursor:pointer}
+.config{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.config select,.config input{background:#0b1220;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px}
+.config input{flex:1;min-width:180px}
+.hint{margin-top:10px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.section{margin-top:42px}
+.section h2{font-size:24px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.feature{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.feature h3{margin:0 0 8px;font-size:17px;display:flex;gap:8px;align-items:center}
+.feature p{margin:0;color:var(--muted);line-height:1.55;font-size:14px}
+.dot{color:var(--good)}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0}
+.steps li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px 14px 54px;margin:10px 0;position:relative;color:var(--muted);line-height:1.55}
+.steps li::before{content:counter(s);position:absolute;left:14px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#082f49;display:grid;place-items:center;font-weight:900}
+code{background:#0b1220;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:13px;color:var(--accent)}
+.back{display:inline-block;margin-bottom:22px;color:var(--accent);text-decoration:none;font-weight:700}
+.foot{margin-top:46px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
+.foot a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="../index.html">← All projects</a>
+<div class="brand"><div class="logo">SX</div></div>
+<h1>SearXNG Privacy Search</h1>
+<p class="lead">A front-end for <strong>SearXNG</strong>, the open-source metasearch engine that aggregates results from 70+ engines without tracking you, profiling you, or sharing your IP with third parties.</p>
+
+<form class="searchbox" id="form">
+  <div class="cats" id="cats">
+    <button type="button" class="cat active" data-cat="general">🌐 Web</button>
+    <button type="button" class="cat" data-cat="images">🖼️ Images</button>
+    <button type="button" class="cat" data-cat="videos">🎬 Videos</button>
+    <button type="button" class="cat" data-cat="news">📰 News</button>
+    <button type="button" class="cat" data-cat="map">🗺️ Map</button>
+    <button type="button" class="cat" data-cat="music">🎵 Music</button>
+    <button type="button" class="cat" data-cat="it">💻 IT</button>
+    <button type="button" class="cat" data-cat="science">🔬 Science</button>
+  </div>
+  <div class="row">
+    <input id="q" name="q" placeholder="Search the web privately…" autocomplete="off" autofocus />
+    <button class="go" type="submit">Search</button>
+  </div>
+  <div class="config">
+    <span>Instance:</span>
+    <select id="instanceSelect">
+      <option value="https://searx.be">searx.be</option>
+      <option value="https://baresearch.org">baresearch.org</option>
+      <option value="https://priv.au">priv.au</option>
+      <option value="https://search.inetol.net">search.inetol.net</option>
+      <option value="https://searx.tiekoetter.com">searx.tiekoetter.com</option>
+      <option value="custom">Custom…</option>
+    </select>
+    <input id="customInstance" placeholder="https://my-searxng.example" style="display:none" />
+  </div>
+  <p class="hint">Your query is sent directly to the SearXNG instance you choose and opens in a new tab. No query is stored on this page (your last-used instance is saved locally in your browser). Pick the instance you trust most, or run your own (see below).</p>
+</form>
+
+<section class="section">
+  <h2>Why SearXNG?</h2>
+  <div class="grid">
+    <div class="feature"><h3><span class="dot">●</span> No tracking</h3><p>No cookies, no profiling, no ad-tech. Your searches aren't logged or sold, and your IP is never shared with the upstream engines.</p></div>
+    <div class="feature"><h3><span class="dot">●</span> 70+ engines</h3><p>Aggregates Google, Bing, DuckDuckGo, Wikipedia, GitHub, and dozens more into one ranked result list you can tune.</p></div>
+    <div class="feature"><h3><span class="dot">●</span> Self-hostable</h3><p>Free and open source (AGPL). Run it on your own server with Docker in minutes for total control.</p></div>
+    <div class="feature"><h3><span class="dot">●</span> Categories</h3><p>Search web, images, videos, news, maps, music, IT, and science — each backed by engines specialized for that content.</p></div>
+    <div class="feature"><h3><span class="dot">●</span> No JavaScript needed</h3><p>The result pages work without client-side scripts and offer a clean, lightweight, ad-free reading experience.</p></div>
+    <div class="feature"><h3><span class="dot">●</span> Open API</h3><p>Add <code>&format=json</code> on a self-hosted instance to build apps, bots, and automations on top of search.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Run your own instance</h2>
+  <ol class="steps">
+    <li>Install Docker, then pull the official image: <code>docker pull searxng/searxng</code></li>
+    <li>Create a config folder and run it: <code>docker run -d -p 8080:8080 -v "$PWD/searxng:/etc/searxng" searxng/searxng</code></li>
+    <li>Open <code>http://localhost:8080</code> and edit <code>searxng/settings.yml</code> to set a <code>secret_key</code> and pick your engines.</li>
+    <li>Back here, choose <strong>Custom…</strong> above and paste your instance URL to search through your own private node.</li>
+  </ol>
+</section>
+
+<p class="foot">
+  SearXNG is free/open-source software (AGPL-3.0).<br/>
+  Project: <a href="https://github.com/searxng/searxng" target="_blank" rel="noopener">github.com/searxng/searxng</a> ·
+  Public instances: <a href="https://searx.space" target="_blank" rel="noopener">searx.space</a><br/>
+  This page is an independent front-end and is not affiliated with the SearXNG project.
+</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let category='general';
+const STORE='searxngFront';
+
+// restore saved instance preference
+try{
+  const saved=JSON.parse(localStorage.getItem(STORE)||'{}');
+  if(saved.instance){
+    const sel=$('instanceSelect');
+    const match=[...sel.options].find(o=>o.value===saved.instance);
+    if(match){sel.value=saved.instance;}
+    else{sel.value='custom';$('customInstance').style.display='';$('customInstance').value=saved.instance;}
+  }
+}catch(e){}
+
+// category tabs
+$('cats').addEventListener('click',e=>{
+  const btn=e.target.closest('.cat');
+  if(!btn)return;
+  document.querySelectorAll('.cat').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  category=btn.dataset.cat;
+});
+
+// custom instance toggle
+$('instanceSelect').addEventListener('change',e=>{
+  $('customInstance').style.display = e.target.value==='custom' ? '' : 'none';
+});
+
+function activeInstance(){
+  const sel=$('instanceSelect').value;
+  let url = sel==='custom' ? $('customInstance').value.trim() : sel;
+  if(!url) return '';
+  if(!/^https?:\/\//i.test(url)) url='https://'+url;
+  return url.replace(/\/+$/,'');
+}
+
+$('form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const q=$('q').value.trim();
+  if(!q){$('q').focus();return;}
+  const base=activeInstance();
+  if(!base){$('customInstance').focus();return;}
+  try{localStorage.setItem(STORE,JSON.stringify({instance:base}));}catch(err){}
+  const url=base+'/search?q='+encodeURIComponent(q)+'&categories='+encodeURIComponent(category);
+  window.open(url,'_blank','noopener');
+});
+</script>
+</body>
+</html>

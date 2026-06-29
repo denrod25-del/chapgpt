@@ -12,6 +12,10 @@ This repository contains website projects recovered from our ChatGPT build histo
    - Path: `javascript-master-encyclopedia/index.html`
    - Visual JavaScript learning/reference website with examples, sections, tables, and diagrams.
 
+3. **SearXNG Privacy Search**
+   - Path: `searxng-search/index.html`
+   - A front-end for the open-source [SearXNG](https://github.com/searxng/searxng) metasearch engine. Search 70+ engines privately by category, switch between public instances (or point it at your own self-hosted node), and follow built-in steps to run SearXNG with Docker.
+
 ## Start page
 
 Open `index.html` to see links to all included projects.
