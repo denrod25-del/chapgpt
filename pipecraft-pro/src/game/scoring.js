@@ -108,6 +108,10 @@ export function satisfactionStars(score, pricingBonus = 0) {
 }
 
 // Inspection report for jobs that require one.
+// - requiresStep:  the step must have been performed.
+// - requiresOrder: [first, second] — both performed, first before second.
+// - requiresPart:  the repair step that installs this part must have been
+//   performed with the part on hand (not merely loaded in the bag).
 export function runInspection(job, play) {
   if (!job.inspectionRequired) return null
   const checks = (job.inspectionChecks || []).map(c => {
@@ -119,7 +123,12 @@ export function runInspection(job, play) {
       const j = play.performedSteps.indexOf(second)
       passed = i !== -1 && j !== -1 && i < j
     }
-    if (c.requiresPart) passed = play.selectedParts.includes(c.requiresPart)
+    if (c.requiresPart) {
+      const installStep = job.repairSteps.find(s => s.usesPart === c.requiresPart)
+      passed = !!installStep
+        && play.performedSteps.includes(installStep.id)
+        && play.selectedParts.includes(c.requiresPart)
+    }
     return { ...c, passed }
   })
   return { checks, passed: checks.every(c => c.passed) }

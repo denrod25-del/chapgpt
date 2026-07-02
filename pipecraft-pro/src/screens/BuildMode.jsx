@@ -23,7 +23,10 @@ export default function BuildMode() {
   const inspect = () => {
     const r = validateBuild(build)
     setResult(r)
-    const xpEarned = r.passed ? 120 : Math.round(r.score / 4)
+    // XP only on a new personal-best score — re-inspecting the same (or a
+    // worse) layout can't be farmed for XP.
+    const prevBest = state.buildBestScore ?? -1
+    const xpEarned = r.score > prevBest ? (r.passed ? 120 : Math.round(r.score / 4)) : 0
     dispatch({ type: 'BUILD_RESULT', score: r.score, xpEarned })
     window.scrollTo({ top: 0 })
   }
@@ -141,7 +144,7 @@ export default function BuildMode() {
         <Button size="lg" variant="ghost" onClick={() => { setBuild(emptyBuild()); setResult(null) }}>↺ Tear out & restart</Button>
       </div>
       <p className="mt-3 text-xs text-slate-500">
-        Passing pays 120 XP. Fitting cheat sheet: sanitary tee = vertical drops · wye+45 = horizontal branches · vent tees never live in a drain path.
+        XP pays out when you beat your best score (120 for a first pass). Fitting cheat sheet: sanitary tee = vertical drops · wye+45 = horizontal branches · vent tees never live in a drain path.
       </p>
     </div>
   )

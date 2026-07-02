@@ -78,9 +78,14 @@ export default function CustomerResult({ job, report, onInspection, onDone, onCa
               <p className="text-xs text-slate-500">No parts consumed on this job.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {r.partsUsed.map((p, i) => (
-                  <Badge key={i} tone="orange">{partById[p]?.icon} {partById[p]?.name} −1</Badge>
-                ))}
+                {r.partsUsed.map((p, i) => {
+                  const wasted = (r.partsWasted || []).includes(p)
+                  return (
+                    <Badge key={i} tone={wasted ? 'red' : 'orange'}>
+                      {partById[p]?.icon} {partById[p]?.name} −1{wasted ? ' (wasted, not billable)' : ''}
+                    </Badge>
+                  )
+                })}
               </div>
             )}
           </div>

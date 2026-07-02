@@ -74,15 +74,24 @@ export default function ServiceCall({ jobId }) {
     const tier = PRICING_TIERS.find(t => t.id === state.pricingTier) || PRICING_TIERS[1]
     const stars = satisfactionStars(score, tier.satisfactionBonus)
 
-    // Parts actually consumed = steps performed that install a part the player brought.
+    // Parts actually consumed = steps performed that install a part the player
+    // brought. Parts burned on wrong (distractor) repairs still leave the van —
+    // you installed them — but only correct-repair parts get billed to the
+    // customer; the company eats the cost of wasted ones.
+    const canConsume = s => s.usesPart && performedSteps.includes(s.id)
+      && selectedParts.includes(s.usesPart) && (state.partsStock[s.usesPart] || 0) > 0
     const partsUsed = []
-    for (const s of [...job.repairSteps, ...(job.distractors || [])]) {
-      if (s.usesPart && performedSteps.includes(s.id) && selectedParts.includes(s.usesPart) && (state.partsStock[s.usesPart] || 0) > 0) {
-        partsUsed.push(s.usesPart)
-      }
+    const partsWasted = []
+    for (const s of job.repairSteps) {
+      if (canConsume(s)) partsUsed.push(s.usesPart)
+    }
+    for (const d of job.distractors || []) {
+      if (canConsume(d)) { partsUsed.push(d.usesPart); partsWasted.push(d.usesPart) }
     }
     const partsCost = partsUsed.reduce((sum, p) => sum + (partById[p]?.cost || 0), 0)
-    const partsBilled = partsUsed.reduce((sum, p) => sum + (partById[p]?.charge || 0), 0)
+    const partsBilled = partsUsed
+      .filter(p => !partsWasted.includes(p))
+      .reduce((sum, p) => sum + (partById[p]?.charge || 0), 0)
 
     let revenue = Math.round(job.laborCharge * tier.multiplier + partsBilled)
     let disputed = false
@@ -100,7 +109,7 @@ export default function ServiceCall({ jobId }) {
       score, base: result.base, breakdown: result.breakdown, mistakes: result.mistakes,
       apprenticeBonus, stars, review, disputed, timedOut,
       revenue, partsCost, wages, profit, xpEarned,
-      partsUsed, inspection, inspectionPassed: inspection ? inspection.passed : null,
+      partsUsed, partsWasted, inspection, inspectionPassed: inspection ? inspection.passed : null,
       timeUsedSec, timeLimitSec: timeLimit,
     }
     setReport(fullReport)

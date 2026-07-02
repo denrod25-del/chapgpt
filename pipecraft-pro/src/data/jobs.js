@@ -209,7 +209,7 @@ export const JOBS = [
     minRank: 0,
     inspectionRequired: true,
     inspectionChecks: [
-      { id: 'insp-power-verified', label: 'Power verified off before servicing', requiresStep: 'test-power' },
+      { id: 'insp-power-verified', label: 'Power verified off before servicing', requiresOrder: ['test-power', 'remove-element'] },
       { id: 'insp-tank-filled', label: 'Tank filled before energizing elements', requiresOrder: ['fill-tank', 'power-on'] },
       { id: 'insp-element-rated', label: 'Correct replacement element installed', requiresPart: 'wh-element' },
     ],
@@ -444,7 +444,7 @@ export const JOBS = [
     minRank: 4,
     inspectionRequired: true,
     inspectionChecks: [
-      { id: 'insp-iso', label: 'Unit isolated before service', requiresStep: 'iso-power-gas' },
+      { id: 'insp-iso', label: 'Unit isolated before service', requiresOrder: ['iso-power-gas', 'remove-rod'] },
       { id: 'insp-ignition', label: 'Clean ignition verified after service', requiresStep: 'restore-test' },
     ],
     xp: 160,
