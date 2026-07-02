@@ -12,6 +12,10 @@ This repository contains website projects recovered from our ChatGPT build histo
    - Path: `javascript-master-encyclopedia/index.html`
    - Visual JavaScript learning/reference website with examples, sections, tables, and diagrams.
 
+3. **PipeCraft Pro** 🔧
+   - Path: `pipecraft-pro/` (React + Vite + Tailwind — run `npm install && npm run dev` inside the folder)
+   - Plumbing career simulator game: timed service calls with diagnosis/repair scoring, a training academy, a house rough-in build mode with code inspections, and a business management layer. See `pipecraft-pro/README.md`.
+
 ## Start page
 
 Open `index.html` to see links to all included projects.
