@@ -1,5 +1,5 @@
 import { partById } from '../../data/parts.js'
-import { Card, Button, Badge, Stars, ProgressBar, money } from '../../components/ui.jsx'
+import { Card, Button, Badge, Stars, ProgressBar, money, mmss } from '../../components/ui.jsx'
 
 // Post-job report card: score breakdown, mistakes, money, XP, review.
 export default function CustomerResult({ job, report, onInspection, onDone, onCareer }) {
@@ -70,7 +70,7 @@ export default function CustomerResult({ job, report, onInspection, onDone, onCa
               <Row label="Net profit" value={money(r.profit)} tone={r.profit >= 0 ? 'text-emerald-400 text-lg' : 'text-red-400 text-lg'} bold />
             </div>
             <Row label="XP earned" value={`+${r.xpEarned} XP`} tone="text-flame-300" bold />
-            <Row label="Time used" value={`${Math.floor(r.timeUsedSec / 60)}:${String(r.timeUsedSec % 60).padStart(2, '0')} / ${Math.floor(r.timeLimitSec / 60)}:${String(r.timeLimitSec % 60).padStart(2, '0')}`} tone="text-slate-300" />
+            <Row label="Time used" value={`${mmss(r.timeUsedSec)} / ${mmss(r.timeLimitSec)}`} tone="text-slate-300" />
           </div>
           <div className="mt-4">
             <h4 className="mb-2 text-sm font-bold text-slate-200">Inventory Used</h4>

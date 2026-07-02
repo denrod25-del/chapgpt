@@ -6,7 +6,7 @@ import { toolById } from '../data/tools.js'
 import { partById } from '../data/parts.js'
 import { PRICING_TIERS, REVIEW_SNIPPETS } from '../data/business.js'
 import { scoreJob, satisfactionStars, runInspection } from '../game/scoring.js'
-import { Card, Button, Badge, SectionTitle, money } from '../components/ui.jsx'
+import { Card, Button, Badge, SectionTitle, money, mmss } from '../components/ui.jsx'
 import DiagnosisChecklist from './servicecall/DiagnosisChecklist.jsx'
 import RepairWorkspace from './servicecall/RepairWorkspace.jsx'
 import CustomerResult from './servicecall/CustomerResult.jsx'
@@ -105,6 +105,7 @@ export default function ServiceCall({ jobId }) {
     const review = pool[Math.floor(Math.random() * pool.length)]
 
     const fullReport = {
+      seq: state.seq + 1, // matches the counter COMPLETE_JOB will assign — used as the permit number
       jobId: job.id, title: job.title, icon: job.icon,
       score, base: result.base, breakdown: result.breakdown, mistakes: result.mistakes,
       apprenticeBonus, stars, review, disputed, timedOut,
@@ -116,8 +117,6 @@ export default function ServiceCall({ jobId }) {
     dispatch({ type: 'COMPLETE_JOB', report: fullReport })
     setPhase('result')
   }
-
-  const mmss = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`
 
   // ---------- Phase: job brief ----------
   if (phase === 'brief') {

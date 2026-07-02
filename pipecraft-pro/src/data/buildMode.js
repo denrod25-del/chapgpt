@@ -113,7 +113,12 @@ export function validateBuild(build) {
   }
 
   const fails = v.filter(x => x.severity === 'fail').length
-  const totalChecks = 6 + FIXTURES.length * 7
+  // Worst-case fail count: 6 system checks + each fixture's applicable checks
+  // (slope, fitting, vent, dead end, plus supply/shutoff/trap where required).
+  const maxFixtureFails = f => 4
+    + (f.needsCold ? 1 : 0) + (f.needsHot ? 1 : 0)
+    + (f.noShutoffOk ? 0 : 1) + (f.needsTrap || f.builtInTrap ? 1 : 0)
+  const totalChecks = 6 + FIXTURES.reduce((sum, f) => sum + maxFixtureFails(f), 0)
   const score = Math.max(0, Math.round(100 * (1 - fails / totalChecks)))
   return { violations: v, passed: fails === 0, score }
 }

@@ -1,7 +1,20 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useGame } from '../state/GameContext.jsx'
 import { LESSONS } from '../data/lessons.js'
 import { Card, SectionTitle, Badge, Button, ProgressBar } from '../components/ui.jsx'
+
+// Shuffle each question's options so the correct answer isn't always in the
+// same slot — the data files list the correct option first for readability.
+function shuffleQuiz(quiz) {
+  return quiz.map(q => {
+    const order = q.options.map((_, i) => i)
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[order[i], order[j]] = [order[j], order[i]]
+    }
+    return { ...q, options: order.map(i => q.options[i]), answer: order.indexOf(q.answer) }
+  })
+}
 
 // Apprentice Mode: lessons + quizzes. Passing a quiz (all correct) awards XP once.
 export default function TrainingAcademy() {
@@ -11,12 +24,15 @@ export default function TrainingAcademy() {
   const [graded, setGraded] = useState(false)
 
   const done = state.lessonsDone.length
+  const lesson = openLesson ? LESSONS.find(l => l.id === openLesson) : null
+  // Reshuffled each time a lesson is opened; stable across re-renders within it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const quiz = useMemo(() => (lesson ? shuffleQuiz(lesson.quiz) : []), [openLesson])
 
-  if (openLesson) {
-    const lesson = LESSONS.find(l => l.id === openLesson)
+  if (lesson) {
     const complete = state.lessonsDone.includes(lesson.id)
-    const allAnswered = lesson.quiz.every((_, i) => answers[i] != null)
-    const allCorrect = lesson.quiz.every((q, i) => answers[i] === q.answer)
+    const allAnswered = quiz.every((_, i) => answers[i] != null)
+    const allCorrect = quiz.every((q, i) => answers[i] === q.answer)
 
     const grade = () => {
       setGraded(true)
@@ -43,7 +59,7 @@ export default function TrainingAcademy() {
 
         <Card className="mt-5 p-5">
           <h3 className="mb-4 font-bold text-slate-100">📝 Knowledge Check</h3>
-          {lesson.quiz.map((q, qi) => (
+          {quiz.map((q, qi) => (
             <div key={qi} className="mb-5">
               <p className="mb-2 text-sm font-semibold text-slate-200">{qi + 1}. {q.q}</p>
               <div className="grid gap-1.5 sm:grid-cols-2">

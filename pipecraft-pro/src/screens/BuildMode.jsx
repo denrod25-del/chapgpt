@@ -3,6 +3,25 @@ import { useGame } from '../state/GameContext.jsx'
 import { FIXTURES, DRAIN_FITTINGS, SUPPLY_SOURCES, SLOPES, emptyBuild, validateBuild } from '../data/buildMode.js'
 import { Card, SectionTitle, Badge, Button, ProgressBar } from '../components/ui.jsx'
 
+// Module-scope so React keeps a stable component identity across renders
+// (defining these inside BuildMode would remount every control on each render).
+const Toggle = ({ on, onChange, label }) => (
+  <button onClick={() => onChange(!on)}
+    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${on ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300' : 'border-ink-600/60 bg-ink-900/50 text-slate-400 hover:border-slate-500'}`}>
+    <span className={`h-2 w-2 rounded-full ${on ? 'bg-emerald-400' : 'bg-slate-600'}`} /> {label}
+  </button>
+)
+
+const Select = ({ value, onChange, options, label }) => (
+  <label className="block text-xs">
+    <span className="mb-0.5 block text-slate-500">{label}</span>
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="w-full rounded-lg border border-ink-600/60 bg-ink-900 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-pipe-500">
+      {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+    </select>
+  </label>
+)
+
 // Build Mode: rough-in a starter house, then call for inspection.
 // The validator enforces basic plumbing logic (hot/cold, slope, venting,
 // traps, shutoffs, fittings, dead ends, cross connections).
@@ -30,23 +49,6 @@ export default function BuildMode() {
     dispatch({ type: 'BUILD_RESULT', score: r.score, xpEarned })
     window.scrollTo({ top: 0 })
   }
-
-  const Toggle = ({ on, onChange, label }) => (
-    <button onClick={() => onChange(!on)}
-      className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${on ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300' : 'border-ink-600/60 bg-ink-900/50 text-slate-400 hover:border-slate-500'}`}>
-      <span className={`h-2 w-2 rounded-full ${on ? 'bg-emerald-400' : 'bg-slate-600'}`} /> {label}
-    </button>
-  )
-
-  const Select = ({ value, onChange, options, label }) => (
-    <label className="block text-xs">
-      <span className="mb-0.5 block text-slate-500">{label}</span>
-      <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full rounded-lg border border-ink-600/60 bg-ink-900 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-pipe-500">
-        {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-      </select>
-    </label>
-  )
 
   return (
     <div className="animate-pop">

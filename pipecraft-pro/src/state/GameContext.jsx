@@ -99,9 +99,10 @@ function reducer(state, action) {
     }
     case 'BUY_PART': {
       const part = PARTS.find(p => p.id === action.id)
+      if (!part) return state
       const qty = action.qty || 1
       const cost = part.cost * qty
-      if (!part || state.money < cost) return state
+      if (state.money < cost) return state
       if (totalStock(state) + qty > vanCapacity(state)) return state
       const seq = state.seq + 1
       return {

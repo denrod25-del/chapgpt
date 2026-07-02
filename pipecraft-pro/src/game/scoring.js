@@ -35,9 +35,7 @@ export function scoreJob(job, play) {
   // --- Parts (15) ---
   const reqParts = job.requiredParts
   const broughtParts = reqParts.filter(p => play.selectedParts.includes(p))
-  const partPts = reqParts.length === 0
-    ? (play.selectedParts.length === 0 ? 15 : 15)
-    : Math.round(15 * (broughtParts.length / reqParts.length))
+  const partPts = reqParts.length === 0 ? 15 : Math.round(15 * (broughtParts.length / reqParts.length))
   breakdown.push({ label: 'Correct parts', earned: partPts, max: 15 })
   score += partPts
   const wrongParts = play.selectedParts.filter(p => !reqParts.includes(p))

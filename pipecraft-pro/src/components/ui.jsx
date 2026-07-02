@@ -29,7 +29,7 @@ export function Button({ children, onClick, variant = 'primary', disabled, class
 }
 
 export function ProgressBar({ value, max = 100, color = 'bg-pipe-500', className = '' }) {
-  const pct = Math.max(0, Math.min(100, (value / max) * 100))
+  const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0
   return (
     <div className={`h-2.5 w-full overflow-hidden rounded-full bg-ink-950/80 ${className}`}>
       <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
@@ -83,3 +83,5 @@ export function SectionTitle({ children, sub }) {
 }
 
 export const money = n => (n < 0 ? `-$${Math.abs(n).toLocaleString()}` : `$${n.toLocaleString()}`)
+
+export const mmss = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.max(0, s) % 60).padStart(2, '0')}`
