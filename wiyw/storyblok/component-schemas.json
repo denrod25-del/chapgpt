@@ -1,0 +1,202 @@
+{
+  "_comment": "WiYW Storyblok component (block) schemas. Import via Management API or recreate in Block Library. Each maps to a React component in components/. Field types match Storyblok's schema format.",
+  "components": [
+    {
+      "name": "page",
+      "display_name": "Page",
+      "is_root": true,
+      "is_nestable": false,
+      "schema": {
+        "body": { "type": "bloks", "restrict_components": true, "component_whitelist": [
+          "hero", "water_test_readout", "service_grid", "service_block", "price_band",
+          "why_test", "testimonial_row", "faq", "service_area", "cta_band", "trust_strip", "contact_form"
+        ]},
+        "seo_title": { "type": "text", "required": true, "description": "<=60 chars. Pattern: [Service] in [City] | What's in Your Water" },
+        "seo_description": { "type": "textarea", "max_length": 160 },
+        "canonical_url": { "type": "text" },
+        "schema_type": { "type": "option", "options": [
+          { "name": "LocalBusiness", "value": "LocalBusiness" },
+          { "name": "Service", "value": "Service" },
+          { "name": "FAQPage", "value": "FAQPage" }
+        ], "default_value": "Service" }
+      }
+    },
+    {
+      "name": "hero",
+      "display_name": "Hero",
+      "is_nestable": true,
+      "schema": {
+        "eyebrow": { "type": "text", "description": "Small label above H1, e.g. 'Palm Beach County · Water & Plumbing'" },
+        "heading": { "type": "text", "required": true, "description": "H1. Include primary keyword naturally." },
+        "subheading": { "type": "textarea" },
+        "variant": { "type": "option", "default_value": "standard", "options": [
+          { "name": "Standard (dual CTA)", "value": "standard" },
+          { "name": "Emergency (call-first)", "value": "emergency" }
+        ]},
+        "primary_cta_label": { "type": "text", "default_value": "Book a Free Water Test" },
+        "primary_cta_link": { "type": "multilink" },
+        "secondary_cta_label": { "type": "text", "default_value": "Call Now" },
+        "show_hardness_gauge": { "type": "boolean", "default_value": true },
+        "trust_items": { "type": "textarea", "description": "Comma-separated: Licensed, Insured, 5.0 stars" }
+      }
+    },
+    {
+      "name": "water_test_readout",
+      "display_name": "Water Test Readout (signature)",
+      "is_nestable": true,
+      "schema": {
+        "hardness_gpg": { "type": "number", "default_value": 18, "description": "PBC typical 15-22 GPG" },
+        "label": { "type": "text", "default_value": "Palm Beach County tap · typical hardness" },
+        "note": { "type": "text", "default_value": "National guides assume 7-10 GPG. Yours is nearly double." }
+      }
+    },
+    {
+      "name": "service_grid",
+      "display_name": "Service Grid",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text" },
+        "items": { "type": "bloks", "component_whitelist": ["service_grid_item"] }
+      }
+    },
+    {
+      "name": "service_grid_item",
+      "display_name": "Service Grid Item",
+      "is_nestable": true,
+      "schema": {
+        "title": { "type": "text", "required": true },
+        "blurb": { "type": "text" },
+        "icon": { "type": "option", "options": [
+          { "name": "Softener", "value": "softener" }, { "name": "Filter", "value": "filter" },
+          { "name": "RO", "value": "ro" }, { "name": "Water heater", "value": "heater" },
+          { "name": "Drain", "value": "drain" }, { "name": "Repipe", "value": "repipe" },
+          { "name": "Well", "value": "well" }, { "name": "Emergency", "value": "emergency" }
+        ]},
+        "link": { "type": "multilink" }
+      }
+    },
+    {
+      "name": "service_block",
+      "display_name": "Service Block (problem/solution/process)",
+      "is_nestable": true,
+      "schema": {
+        "kind": { "type": "option", "default_value": "problem", "options": [
+          { "name": "Problem", "value": "problem" }, { "name": "Solution", "value": "solution" },
+          { "name": "Process", "value": "process" }
+        ]},
+        "heading": { "type": "text", "required": true },
+        "body": { "type": "richtext" },
+        "steps": { "type": "textarea", "description": "For 'process' kind: one step per line" }
+      }
+    },
+    {
+      "name": "price_band",
+      "display_name": "Price Band (real PBC pricing)",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text", "default_value": "What it costs in Palm Beach County" },
+        "tiers": { "type": "bloks", "component_whitelist": ["price_tier"] },
+        "disclaimer": { "type": "text", "default_value": "Final price after a free in-home water test. No blind quotes." }
+      }
+    },
+    {
+      "name": "price_tier",
+      "display_name": "Price Tier",
+      "is_nestable": true,
+      "schema": {
+        "label": { "type": "text", "required": true, "description": "e.g. 'City water softener'" },
+        "range": { "type": "text", "required": true, "description": "e.g. '$1,200-$2,800 installed'" },
+        "note": { "type": "text", "description": "e.g. 'With catalytic carbon pre-filter'" }
+      }
+    },
+    {
+      "name": "why_test",
+      "display_name": "Why Test (differentiator)",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text", "default_value": "We test first. Then we fix what's actually there." },
+        "body": { "type": "richtext" },
+        "contaminants": { "type": "textarea", "description": "One per line: Hardness, Iron, Hydrogen sulfide, Chlorine, PFAS" }
+      }
+    },
+    {
+      "name": "testimonial_row",
+      "display_name": "Testimonial Row",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text" },
+        "items": { "type": "bloks", "component_whitelist": ["testimonial"] }
+      }
+    },
+    {
+      "name": "testimonial",
+      "display_name": "Testimonial",
+      "is_nestable": true,
+      "schema": {
+        "quote": { "type": "textarea", "required": true },
+        "author": { "type": "text", "required": true },
+        "location": { "type": "text", "description": "e.g. 'Loxahatchee' — reinforces local + service area" },
+        "rating": { "type": "number", "default_value": 5 }
+      }
+    },
+    {
+      "name": "faq",
+      "display_name": "FAQ (emits FAQPage schema)",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text", "default_value": "Common questions" },
+        "items": { "type": "bloks", "component_whitelist": ["faq_item"] }
+      }
+    },
+    {
+      "name": "faq_item",
+      "display_name": "FAQ Item",
+      "is_nestable": true,
+      "schema": {
+        "question": { "type": "text", "required": true },
+        "answer": { "type": "richtext", "required": true }
+      }
+    },
+    {
+      "name": "service_area",
+      "display_name": "Service Area",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text", "default_value": "Serving Palm Beach County" },
+        "cities": { "type": "textarea", "description": "One per line: West Palm Beach, Boca Raton, Wellington, Loxahatchee..." },
+        "note": { "type": "text", "description": "Well-water callout for western PBC" }
+      }
+    },
+    {
+      "name": "cta_band",
+      "display_name": "CTA Band",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text", "required": true },
+        "cta_label": { "type": "text", "default_value": "Book a Free Water Test" },
+        "cta_link": { "type": "multilink" },
+        "phone_label": { "type": "text" }
+      }
+    },
+    {
+      "name": "trust_strip",
+      "display_name": "Trust Strip",
+      "is_nestable": true,
+      "schema": {
+        "items": { "type": "textarea", "description": "One per line: Licensed & insured, 5.0 Google rating, Free water test" }
+      }
+    },
+    {
+      "name": "contact_form",
+      "display_name": "Contact / Lead Form",
+      "is_nestable": true,
+      "schema": {
+        "heading": { "type": "text", "default_value": "Get a free water test" },
+        "urgency_default": { "type": "option", "default_value": "standard", "options": [
+          { "name": "Standard", "value": "standard" }, { "name": "Emergency", "value": "emergency" }
+        ]},
+        "service_options": { "type": "textarea", "description": "One per line, must match backend service_type enum" }
+      }
+    }
+  ]
+}

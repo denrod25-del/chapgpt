@@ -1,0 +1,139 @@
+{
+  "name": "WF-3 Reactivation (9mo lapsed)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 * * 1" }] } },
+      "id": "trigger",
+      "name": "Weekly Mon 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.id, c.full_name, c.email, c.phone, c.consent_email, c.consent_sms, c.water_source FROM customers c WHERE c.last_job_at < now()-interval '9 months' AND c.id NOT IN (SELECT et.customer_id FROM entity_tags et JOIN tags t ON t.id=et.tag_id WHERE t.name='reactivation' AND et.applied_at > now()-interval '90 days' AND et.customer_id IS NOT NULL);"
+      },
+      "id": "fetch",
+      "name": "Fetch lapsed customers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": { "options": {} },
+      "id": "split",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO entity_tags (tag_id, customer_id) SELECT id, $1 FROM tags WHERE name='reactivation' ON CONFLICT DO NOTHING;",
+        "options": { "queryReplacement": "={{$json.id}}" }
+      },
+      "id": "tag",
+      "name": "Tag reactivation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [900, 300],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "api-key", "value": "REPLACE_BREVO_KEY" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"to\":[{\"email\":\"{{$json.email}}\",\"name\":\"{{$json.full_name}}\"}],\"templateId\": REPLACE_BREVO_REACTIVATION_TEMPLATE_ID,\"params\":{\"WATER_SOURCE\":\"{{$json.water_source}}\"}}"
+      },
+      "id": "email",
+      "name": "Send reactivation email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": { "amount": 7, "unit": "days" },
+      "id": "wait",
+      "name": "Wait 7 days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1340, 300],
+      "webhookId": "reactivation-wait"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT count(*) AS engaged FROM events WHERE customer_id=$1 AND event_name IN ('email_opened','email_clicked') AND created_at > now()-interval '7 days';",
+        "options": { "queryReplacement": "={{$json.id}}" }
+      },
+      "id": "check",
+      "name": "Check engagement",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1560, 300],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "typeValidation": "loose" },
+          "conditions": [{ "leftValue": "={{$json.engaged}}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "engaged_if",
+      "name": "Engaged?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO entity_tags (tag_id, customer_id) SELECT id, $1 FROM tags WHERE name='reactivation-warm' ON CONFLICT DO NOTHING;",
+        "options": { "queryReplacement": "={{$json.id}}" }
+      },
+      "id": "warmtag",
+      "name": "Tag warm",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2000, 220],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gatewayapi.com/rest/mtsms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"sender\":\"WiYW\",\"message\":\"What's in Your Water: It's been a while, {{$json.full_name}}! Time for a water-quality check or softener service? Call REPLACE_BRAND_PHONE to book.\",\"recipients\":[{\"msisdn\": {{$json.phone.replace('+','')}} }]}"
+      },
+      "id": "sms_nudge",
+      "name": "SMS nudge (not engaged)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 380],
+      "credentials": { "httpBasicAuth": { "id": "REPLACE_GW_CRED", "name": "GatewayAPI" } }
+    }
+  ],
+  "connections": {
+    "Weekly Mon 9am": { "main": [[{ "node": "Fetch lapsed customers", "type": "main", "index": 0 }]] },
+    "Fetch lapsed customers": { "main": [[{ "node": "Split Out", "type": "main", "index": 0 }]] },
+    "Split Out": { "main": [[{ "node": "Tag reactivation", "type": "main", "index": 0 }]] },
+    "Tag reactivation": { "main": [[{ "node": "Send reactivation email", "type": "main", "index": 0 }]] },
+    "Send reactivation email": { "main": [[{ "node": "Wait 7 days", "type": "main", "index": 0 }]] },
+    "Wait 7 days": { "main": [[{ "node": "Check engagement", "type": "main", "index": 0 }]] },
+    "Check engagement": { "main": [[{ "node": "Engaged?", "type": "main", "index": 0 }]] },
+    "Engaged?": { "main": [[{ "node": "Tag warm", "type": "main", "index": 0 }], [{ "node": "SMS nudge (not engaged)", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

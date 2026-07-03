@@ -1,0 +1,88 @@
+{
+  "name": "WF-4 Missed Lead Recovery",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] } },
+      "id": "trigger",
+      "name": "Every 5 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT l.id, l.full_name, l.phone, l.service_type FROM leads l WHERE l.status='new' AND l.contacted_at IS NULL AND l.created_at < now()-interval '15 minutes' AND l.created_at > now()-interval '2 hours' AND NOT EXISTS (SELECT 1 FROM communication_logs cl WHERE cl.lead_id=l.id AND cl.template='sms_missed_recovery');"
+      },
+      "id": "fetch",
+      "name": "Fetch stale leads",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": { "options": {} },
+      "id": "split",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "parameters_note": "fieldToSplitOut set to the query result array"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gatewayapi.com/rest/mtsms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"sender\":\"WiYW\",\"message\":\"WiYW: Lead {{$json.full_name}} ({{$json.service_type}}) uncontacted 15+ min — call now.\",\"recipients\":[{\"msisdn\": REPLACE_OWNER_MSISDN }]}"
+      },
+      "id": "owner_sms",
+      "name": "Owner escalation SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 220],
+      "credentials": { "httpBasicAuth": { "id": "REPLACE_GW_CRED", "name": "GatewayAPI" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gatewayapi.com/rest/mtsms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"sender\":\"WiYW\",\"message\":\"What's in Your Water: We received your request and will call you shortly. Need us now? Call REPLACE_BRAND_PHONE\",\"recipients\":[{\"msisdn\": {{$json.phone.replace('+','')}} }]}"
+      },
+      "id": "lead_sms",
+      "name": "Reassurance SMS to lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 380],
+      "credentials": { "httpBasicAuth": { "id": "REPLACE_GW_CRED", "name": "GatewayAPI" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO communication_logs (channel,direction,to_addr,provider,template,status,lead_id) VALUES ('sms','outbound',$1,'gatewayapi','sms_missed_recovery','sent',$2);",
+        "options": { "queryReplacement": "={{$json.phone}},={{$json.id}}" }
+      },
+      "id": "log",
+      "name": "Log comm",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 380],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every 5 min": { "main": [[{ "node": "Fetch stale leads", "type": "main", "index": 0 }]] },
+    "Fetch stale leads": { "main": [[{ "node": "Split Out", "type": "main", "index": 0 }]] },
+    "Split Out": { "main": [[{ "node": "Owner escalation SMS", "type": "main", "index": 0 }, { "node": "Reassurance SMS to lead", "type": "main", "index": 0 }]] },
+    "Reassurance SMS to lead": { "main": [[{ "node": "Log comm", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

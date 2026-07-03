@@ -1,0 +1,123 @@
+{
+  "name": "WF-1 Appointment Reminders",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] } },
+      "id": "trigger",
+      "name": "Every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT b.id, c.full_name, c.phone, b.scheduled_for, b.service_type FROM bookings b JOIN customers c ON c.id=b.customer_id WHERE b.status IN ('scheduled','confirmed') AND b.reminder_24h_sent=false AND c.consent_sms=true AND b.scheduled_for BETWEEN now()+interval '23 hours' AND now()+interval '24 hours';"
+      },
+      "id": "fetch24",
+      "name": "Fetch due 24h",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 220],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT b.id, c.full_name, c.phone, b.scheduled_for, b.service_type FROM bookings b JOIN customers c ON c.id=b.customer_id WHERE b.status IN ('scheduled','confirmed') AND b.reminder_2h_sent=false AND c.consent_sms=true AND b.scheduled_for BETWEEN now()+interval '105 minutes' AND now()+interval '120 minutes';"
+      },
+      "id": "fetch2",
+      "name": "Fetch due 2h",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 380],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": { "fieldToSplitOut": "={{ Object.keys($json)[0] ? $json : $json }}", "options": {} },
+      "id": "split24",
+      "name": "Split 24h",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 220]
+    },
+    {
+      "parameters": { "options": {} },
+      "id": "split2",
+      "name": "Split 2h",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gatewayapi.com/rest/mtsms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"sender\":\"WiYW\",\"message\":\"What's in Your Water: Reminder — your {{$json.service_type.replace('_',' ')}} appointment is tomorrow at {{ new Date($json.scheduled_for).toLocaleString('en-US',{hour:'numeric',minute:'2-digit'}) }}. Reply C to confirm or R to reschedule.\",\"recipients\":[{\"msisdn\": {{$json.phone.replace('+','')}} }]}"
+      },
+      "id": "sms24",
+      "name": "Send 24h SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 220],
+      "credentials": { "httpBasicAuth": { "id": "REPLACE_GW_CRED", "name": "GatewayAPI" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gatewayapi.com/rest/mtsms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"sender\":\"WiYW\",\"message\":\"What's in Your Water: Your plumber arrives in ~2 hours for your {{$json.service_type.replace('_',' ')}}. Questions? Call REPLACE_BRAND_PHONE\",\"recipients\":[{\"msisdn\": {{$json.phone.replace('+','')}} }]}"
+      },
+      "id": "sms2",
+      "name": "Send 2h SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 380],
+      "credentials": { "httpBasicAuth": { "id": "REPLACE_GW_CRED", "name": "GatewayAPI" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE bookings SET reminder_24h_sent=true WHERE id=$1; INSERT INTO communication_logs (channel,direction,to_addr,provider,template,status) VALUES ('sms','outbound',$2,'gatewayapi','sms_reminder_24h','sent'); INSERT INTO events (event_name,payload,source_system) VALUES ('appointment_reminder_sent', jsonb_build_object('booking_id',$1::text,'window','24h'),'n8n');",
+        "options": { "queryReplacement": "={{$json.id}},={{$json.phone}}" }
+      },
+      "id": "mark24",
+      "name": "Mark 24h sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 220],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE bookings SET reminder_2h_sent=true WHERE id=$1; INSERT INTO communication_logs (channel,direction,to_addr,provider,template,status) VALUES ('sms','outbound',$2,'gatewayapi','sms_reminder_2h','sent'); INSERT INTO events (event_name,payload,source_system) VALUES ('appointment_reminder_sent', jsonb_build_object('booking_id',$1::text,'window','2h'),'n8n');",
+        "options": { "queryReplacement": "={{$json.id}},={{$json.phone}}" }
+      },
+      "id": "mark2",
+      "name": "Mark 2h sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 380],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every 15 min": { "main": [[{ "node": "Fetch due 24h", "type": "main", "index": 0 }, { "node": "Fetch due 2h", "type": "main", "index": 0 }]] },
+    "Fetch due 24h": { "main": [[{ "node": "Split 24h", "type": "main", "index": 0 }]] },
+    "Fetch due 2h": { "main": [[{ "node": "Split 2h", "type": "main", "index": 0 }]] },
+    "Split 24h": { "main": [[{ "node": "Send 24h SMS", "type": "main", "index": 0 }]] },
+    "Split 2h": { "main": [[{ "node": "Send 2h SMS", "type": "main", "index": 0 }]] },
+    "Send 24h SMS": { "main": [[{ "node": "Mark 24h sent", "type": "main", "index": 0 }]] },
+    "Send 2h SMS": { "main": [[{ "node": "Mark 2h sent", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

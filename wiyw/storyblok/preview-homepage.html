@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Water Treatment & Plumbing in Palm Beach County | What's in Your Water</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ---- tokens (inlined for standalone preview) ---- */
+:root{
+  --aquifer:#0B1F2A;--aquifer-2:#102E3D;--tested-cyan:#12B0C9;--cyan-deep:#0A7E92;
+  --mineral:#F5F7F6;--mineral-2:#E7ECEB;--hardness:#E8A13A;--slate:#5A6B72;--ink:#0B1F2A;
+  --font-display:'Fraunces',Georgia,serif;--font-body:'Inter',system-ui,sans-serif;--font-mono:'JetBrains Mono',ui-monospace,monospace;
+  --step--1:clamp(0.83rem,0.8rem + 0.15vw,0.9rem);--step-0:clamp(1rem,0.95rem + 0.25vw,1.125rem);
+  --step-1:clamp(1.33rem,1.2rem + 0.6vw,1.6rem);--step-2:clamp(1.77rem,1.5rem + 1.2vw,2.4rem);
+  --step-3:clamp(2.36rem,1.9rem + 2.2vw,3.6rem);--step-4:clamp(3.15rem,2.4rem + 3.6vw,5.2rem);
+  --gap:clamp(1rem,0.8rem + 1vw,1.75rem);--section-y:clamp(3rem,2rem + 5vw,6rem);
+  --radius:14px;--radius-sm:8px;--maxw:1120px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);color:var(--ink);background:var(--mineral);font-size:var(--step-0);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:var(--gap)}
+h1,h2,h3{font-family:var(--font-display);font-weight:500;line-height:1.05;letter-spacing:-0.01em}
+a{color:inherit;text-decoration:none}
+.mono{font-family:var(--font-mono)}
+
+/* ---- header ---- */
+header{position:sticky;top:0;z-index:50;background:rgba(11,31,42,.92);backdrop-filter:blur(8px);color:var(--mineral)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;padding-block:.85rem}
+.logo{font-family:var(--font-display);font-weight:600;font-size:var(--step-1);color:var(--mineral)}
+.logo span{color:var(--tested-cyan)}
+nav a{color:#C7D3D6;font-size:var(--step--1);margin-inline:.7rem}
+nav a:hover{color:var(--mineral)}
+.callbtn{background:var(--tested-cyan);color:var(--aquifer);font-weight:600;padding:.6rem 1rem;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:var(--step--1)}
+.callbtn:hover{background:#3ec7dd}
+
+/* ---- hero ---- */
+.hero{background:linear-gradient(160deg,var(--aquifer) 0%,var(--aquifer-2) 100%);color:var(--mineral);padding-block:var(--section-y);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% 20%,rgba(18,176,201,.18),transparent 45%);pointer-events:none}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.3fr .9fr;gap:calc(var(--gap)*2);align-items:center}
+.eyebrow{font-family:var(--font-mono);font-size:var(--step--1);letter-spacing:.08em;text-transform:uppercase;color:var(--tested-cyan);margin-bottom:1rem}
+.hero h1{font-size:var(--step-4);margin-bottom:1rem}
+.hero p.sub{color:#C7D3D6;font-size:var(--step-1);max-width:34ch;margin-bottom:1.75rem}
+.cta-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.btn-primary{background:var(--tested-cyan);color:var(--aquifer);font-weight:600;padding:.85rem 1.4rem;border-radius:var(--radius-sm)}
+.btn-primary:hover{background:#3ec7dd}
+.btn-ghost{border:1px solid #35505c;color:var(--mineral);padding:.85rem 1.4rem;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:var(--step--1)}
+.btn-ghost:hover{border-color:var(--tested-cyan)}
+.trust{display:flex;gap:1.2rem;flex-wrap:wrap;color:#8fa3a9;font-size:var(--step--1)}
+.trust b{color:var(--mineral)}
+
+/* ---- signature: water test readout ---- */
+.readout{background:var(--aquifer-2);border:1px solid #23414f;border-radius:var(--radius);padding:1.5rem}
+.readout .label{font-size:var(--step--1);color:#8fa3a9;margin-bottom:.5rem}
+.gauge{position:relative;height:10px;background:linear-gradient(90deg,#1a8a3f 0%,var(--hardness) 55%,#c0392b 100%);border-radius:99px;margin:1.6rem 0 .6rem}
+.gauge .marker{position:absolute;top:-7px;width:3px;height:24px;background:var(--mineral);border-radius:2px;box-shadow:0 0 0 3px rgba(11,31,42,.6)}
+.gauge-scale{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.7rem;color:#6f858c}
+.readout .big{font-family:var(--font-mono);font-weight:700;font-size:var(--step-3);color:var(--mineral);line-height:1}
+.readout .big .unit{font-size:var(--step-1);color:var(--tested-cyan)}
+.readout .note{font-size:var(--step--1);color:#a9bcc1;margin-top:.75rem;border-top:1px solid #23414f;padding-top:.75rem}
+
+/* ---- sections ---- */
+section.block{padding-block:var(--section-y)}
+.sec-eyebrow{font-family:var(--font-mono);font-size:var(--step--1);letter-spacing:.08em;text-transform:uppercase;color:var(--cyan-deep);margin-bottom:.6rem}
+h2{font-size:var(--step-3);margin-bottom:1.5rem;max-width:20ch}
+
+/* service grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
+.card{background:#fff;border:1px solid var(--mineral-2);border-radius:var(--radius);padding:1.4rem;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);box-shadow:0 12px 28px -12px rgba(11,31,42,.25)}
+.card .ic{width:38px;height:38px;border-radius:9px;background:rgba(18,176,201,.12);display:grid;place-items:center;margin-bottom:.9rem;color:var(--cyan-deep);font-family:var(--font-mono);font-weight:700}
+.card h3{font-size:var(--step-1);margin-bottom:.35rem}
+.card p{font-size:var(--step--1);color:var(--slate)}
+
+/* why test */
+.why{background:var(--aquifer);color:var(--mineral)}
+.why h2{color:var(--mineral)}
+.contam{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.5rem}
+.chip{font-family:var(--font-mono);font-size:var(--step--1);border:1px solid #35505c;color:#C7D3D6;padding:.4rem .8rem;border-radius:99px}
+.chip.warn{border-color:var(--hardness);color:var(--hardness)}
+
+/* price band */
+.prices{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
+.ptier{background:#fff;border:1px solid var(--mineral-2);border-radius:var(--radius);padding:1.4rem}
+.ptier .plabel{font-size:var(--step-0);font-weight:600;margin-bottom:.4rem}
+.ptier .prange{font-family:var(--font-mono);font-weight:700;font-size:var(--step-1);color:var(--cyan-deep)}
+.ptier .pnote{font-size:var(--step--1);color:var(--slate);margin-top:.4rem}
+.disc{font-size:var(--step--1);color:var(--slate);margin-top:1.2rem;font-style:italic}
+
+/* reviews */
+.reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap)}
+.review{background:#fff;border:1px solid var(--mineral-2);border-radius:var(--radius);padding:1.4rem}
+.stars{color:var(--hardness);letter-spacing:2px;margin-bottom:.6rem}
+.review .q{font-size:var(--step-0);margin-bottom:.8rem}
+.review .who{font-size:var(--step--1);color:var(--slate)}
+.review .who b{color:var(--ink)}
+
+/* cta band */
+.ctaband{background:var(--tested-cyan);color:var(--aquifer);border-radius:var(--radius);padding:clamp(1.5rem,3vw,2.5rem);display:flex;align-items:center;justify-content:space-between;gap:var(--gap);flex-wrap:wrap}
+.ctaband h2{color:var(--aquifer);margin:0;font-size:var(--step-2)}
+.ctaband .btn-dark{background:var(--aquifer);color:var(--mineral);padding:.85rem 1.4rem;border-radius:var(--radius-sm);font-weight:600}
+
+/* footer */
+footer{background:var(--aquifer);color:#8fa3a9;padding-block:var(--section-y) 2rem;font-size:var(--step--1)}
+footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr;gap:var(--gap);margin-bottom:2rem}
+footer b{color:var(--mineral);display:block;margin-bottom:.5rem}
+footer a{color:#8fa3a9;display:block;padding:.15rem 0}
+footer a:hover{color:var(--tested-cyan)}
+
+@media(max-width:820px){
+  .hero .wrap,.grid,.prices,.reviews,footer .cols{grid-template-columns:1fr}
+  nav{display:none}
+}
+:focus-visible{outline:3px solid var(--tested-cyan);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="logo" href="#">What's in Your <span>Water</span></a>
+    <nav>
+      <a href="#services">Services</a>
+      <a href="#why">Why test</a>
+      <a href="#prices">Pricing</a>
+      <a href="#reviews">Reviews</a>
+    </nav>
+    <a class="callbtn" href="tel:+15615550100">Call (561) 555-0100</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Palm Beach County · Water &amp; Plumbing</div>
+      <h1>Know what's in your water.</h1>
+      <p class="sub">Softeners, filtration, and full plumbing — from hard water and iron to PFAS. We test first, then fix what's actually there.</p>
+      <div class="cta-row">
+        <a class="btn-primary" href="#contact">Book a Free Water Test</a>
+        <a class="btn-ghost" href="tel:+15615550100">Call (561) 555-0100</a>
+      </div>
+      <div class="trust">
+        <span><b>Licensed</b> &amp; insured</span>
+        <span><b>5.0</b> Google rating</span>
+        <span><b>Free</b> in-home test</span>
+      </div>
+    </div>
+    <!-- SIGNATURE: water test readout -->
+    <div class="readout" aria-label="Palm Beach County water hardness readout">
+      <div class="label">Palm Beach County tap · typical hardness</div>
+      <div class="big">18<span class="unit"> GPG</span></div>
+      <div class="gauge"><div class="marker" style="left:70%"></div></div>
+      <div class="gauge-scale"><span>0 soft</span><span>7</span><span>15</span><span>22 very hard</span></div>
+      <div class="note">National guides assume 7–10 GPG. Biscayne Aquifer water runs 15–22 — nearly double. That's why most local homes need a 48,000-grain system, not the 32,000 the national sites recommend.</div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICE GRID -->
+<section class="block wrap" id="services">
+  <div class="sec-eyebrow">What we do</div>
+  <h2>Two problems, one crew: your water and your plumbing.</h2>
+  <div class="grid">
+    <div class="card"><div class="ic">SO</div><h3>Water Softeners</h3><p>Ion-exchange systems sized for real PBC hardness — not national guesswork.</p></div>
+    <div class="card"><div class="ic">WE</div><h3>Well Water Treatment</h3><p>Iron, sulfur, bacteria &amp; hardness for Loxahatchee, Acreage &amp; Wellington.</p></div>
+    <div class="card"><div class="ic">FI</div><h3>Whole-House Filtration</h3><p>Chlorine, sediment &amp; PFAS reduction at the point of entry.</p></div>
+    <div class="card"><div class="ic">WH</div><h3>Water Heaters &amp; Tankless</h3><p>Repair, replace, and tankless conversions built for FL water.</p></div>
+    <div class="card"><div class="ic">DR</div><h3>Drain Cleaning</h3><p>Clogs, slow drains &amp; backups — cleared with upfront pricing.</p></div>
+    <div class="card"><div class="ic">EM</div><h3>Emergency Plumbing</h3><p>Burst pipes, no hot water, storm flooding — answered 24/7.</p></div>
+  </div>
+</section>
+
+<!-- WHY TEST -->
+<section class="block why" id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow" style="color:var(--tested-cyan)">The difference</div>
+    <h2>We test first. Then we fix what's actually there.</h2>
+    <p style="color:#C7D3D6;max-width:52ch">PBC water isn't the same street to street. Coastal homes fight hardness and chlorine; wells out west deal with iron, sulfur, and bacteria. Municipal PFAS rules don't cover private wells at all — if you're on a well, you're on your own. We test before we quote, so you buy exactly what your water needs.</p>
+    <div class="contam">
+      <span class="chip warn">Hardness 15–22 GPG</span>
+      <span class="chip">Iron</span>
+      <span class="chip">Hydrogen sulfide</span>
+      <span class="chip">Chlorine</span>
+      <span class="chip">PFAS</span>
+      <span class="chip">Bacteria (wells)</span>
+    </div>
+  </div>
+</section>
+
+<!-- PRICE BAND -->
+<section class="block wrap" id="prices">
+  <div class="sec-eyebrow">Straight pricing</div>
+  <h2>What it costs in Palm Beach County.</h2>
+  <div class="prices">
+    <div class="ptier"><div class="plabel">City water softener</div><div class="prange">$1,200–$2,800</div><div class="pnote">Installed. Add catalytic carbon pre-filter: to $3,000.</div></div>
+    <div class="ptier"><div class="plabel">Well water + iron pre-treatment</div><div class="prange">$3,500–$6,500</div><div class="pnote">Multi-stage. Final scope set by your water test.</div></div>
+    <div class="ptier"><div class="plabel">Whole-house filtration</div><div class="prange">from $2,500</div><div class="pnote">Point-of-entry. Softener + filter + RO combos available.</div></div>
+  </div>
+  <p class="disc">Final price after a free in-home water test. No blind quotes, no surprise add-ons.</p>
+</section>
+
+<!-- REVIEWS -->
+<section class="block wrap" id="reviews">
+  <div class="sec-eyebrow">What neighbors say</div>
+  <h2>Trusted across the county.</h2>
+  <div class="reviews">
+    <div class="review"><div class="stars">★★★★★</div><p class="q">"They tested our well before recommending anything. Turned out we needed iron treatment, not just a softener. No hard sell."</p><p class="who"><b>Marcus T.</b> · Loxahatchee</p></div>
+    <div class="review"><div class="stars">★★★★★</div><p class="q">"Water heater died on a Sunday. Real person answered, gave an arrival window, fixed it same day."</p><p class="who"><b>Dana R.</b> · Boca Raton</p></div>
+    <div class="review"><div class="stars">★★★★★</div><p class="q">"Finally understood why my old softener never worked — it was sized for the wrong hardness. New one's perfect."</p><p class="who"><b>Priya S.</b> · Wellington</p></div>
+  </div>
+</section>
+
+<!-- CTA BAND -->
+<section class="block wrap" id="contact">
+  <div class="ctaband">
+    <h2>Find out what's in your water — free.</h2>
+    <a class="btn-dark" href="#">Book a Free Water Test</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <b>What's in Your Water</b>
+        Licensed &amp; insured plumbing and water treatment<br>Serving Palm Beach County, FL<br>License #CFC-XXXXXXX
+      </div>
+      <div><b>Services</b><a href="#">Water softeners</a><a href="#">Well water treatment</a><a href="#">Filtration &amp; RO</a><a href="#">Water heaters</a><a href="#">Emergency plumbing</a></div>
+      <div><b>Contact</b><a href="tel:+15615550100">(561) 555-0100</a><a href="#">Book a water test</a><a href="#">Service area</a><a href="#">Reviews</a></div>
+    </div>
+    <div>© 2026 What's in Your Water · B. Symbolic LLC</div>
+  </div>
+</footer>
+
+</body>
+</html>

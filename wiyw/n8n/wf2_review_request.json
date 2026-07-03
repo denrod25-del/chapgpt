@@ -1,0 +1,102 @@
+{
+  "name": "WF-2 Post-Job Review Request",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 30 }] } },
+      "id": "trigger",
+      "name": "Every 30 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT j.id AS job_id, c.id AS customer_id, c.full_name, c.phone, c.email, c.consent_sms FROM jobs j JOIN customers c ON c.id=j.customer_id WHERE j.completed_at IS NOT NULL AND j.review_requested=false AND j.completed_at < now()-interval '2 hours';"
+      },
+      "id": "fetch",
+      "name": "Fetch completed jobs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [460, 300],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    },
+    {
+      "parameters": { "options": {} },
+      "id": "split",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{$json.consent_sms}}", "rightValue": true, "operator": { "type": "boolean", "operation": "true" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "consent",
+      "name": "Has SMS consent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gatewayapi.com/rest/mtsms",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"sender\":\"WiYW\",\"message\":\"What's in Your Water: Thanks for choosing us, {{$json.full_name}}! Hope everything's working great. Mind leaving a quick review? REPLACE_REVIEW_BASE/{{$json.job_id}} — takes 30 seconds.\",\"recipients\":[{\"msisdn\": {{$json.phone.replace('+','')}} }]}"
+      },
+      "id": "sms",
+      "name": "Send review SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 220],
+      "credentials": { "httpBasicAuth": { "id": "REPLACE_GW_CRED", "name": "GatewayAPI" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "api-key", "value": "REPLACE_BREVO_KEY" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"to\":[{\"email\":\"{{$json.email}}\",\"name\":\"{{$json.full_name}}\"}],\"templateId\": REPLACE_BREVO_REVIEW_TEMPLATE_ID,\"params\":{\"REVIEW_LINK\":\"REPLACE_REVIEW_BASE/{{$json.job_id}}\"}}"
+      },
+      "id": "email",
+      "name": "Send review email (no SMS consent)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 380]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE jobs SET review_requested=true WHERE id=$1; INSERT INTO entity_tags (tag_id, customer_id) SELECT id, $2 FROM tags WHERE name='review-requested' ON CONFLICT DO NOTHING; INSERT INTO events (event_name, customer_id, payload, source_system) VALUES ('review_request_sent', $2, jsonb_build_object('job_id',$1::text), 'n8n');",
+        "options": { "queryReplacement": "={{$json.job_id}},={{$json.customer_id}}" }
+      },
+      "id": "mark",
+      "name": "Mark requested + tag + event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1340, 300],
+      "credentials": { "postgres": { "id": "REPLACE_PG_CRED", "name": "WiYW Postgres" } }
+    }
+  ],
+  "connections": {
+    "Every 30 min": { "main": [[{ "node": "Fetch completed jobs", "type": "main", "index": 0 }]] },
+    "Fetch completed jobs": { "main": [[{ "node": "Split Out", "type": "main", "index": 0 }]] },
+    "Split Out": { "main": [[{ "node": "Has SMS consent?", "type": "main", "index": 0 }]] },
+    "Has SMS consent?": { "main": [[{ "node": "Send review SMS", "type": "main", "index": 0 }], [{ "node": "Send review email (no SMS consent)", "type": "main", "index": 0 }]] },
+    "Send review SMS": { "main": [[{ "node": "Mark requested + tag + event", "type": "main", "index": 0 }]] },
+    "Send review email (no SMS consent)": { "main": [[{ "node": "Mark requested + tag + event", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
