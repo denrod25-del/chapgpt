@@ -3,8 +3,12 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repositories import get_brand_id_by_slug, get_or_create_contact
-from app.repositories import event_repository, lead_repository
+from app.repositories import (
+    event_repository,
+    get_brand_id_by_slug,
+    get_or_create_contact,
+    lead_repository,
+)
 from app.schemas.common import LeadStatus
 from app.schemas.lead import LeadCreateRequest, LeadCreateResponse
 

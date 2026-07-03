@@ -7,8 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.booking import Booking
-from app.repositories import get_brand_id_by_slug, get_or_create_contact
-from app.repositories import booking_repository, event_repository
+from app.repositories import (
+    booking_repository,
+    event_repository,
+    get_brand_id_by_slug,
+    get_or_create_contact,
+)
 from app.schemas.booking import BookingCreateRequest, BookingResponse
 from app.schemas.common import BookingStatus
 

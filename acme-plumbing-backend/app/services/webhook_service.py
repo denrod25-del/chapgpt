@@ -41,6 +41,17 @@ _SIGNATURE_HEADERS: dict[str, str] = {
 }
 
 
+def _extract_signature(provider: str, request: Request, payload: dict) -> Optional[str]:
+    """Raw signature for later verification/forensics. Mailgun's JSON webhooks
+    carry it in the body (signature.signature), not a header."""
+    header_sig = request.headers.get(_SIGNATURE_HEADERS.get(provider, ""), None)
+    if header_sig:
+        return header_sig
+    if provider == "mailgun":
+        return (payload.get("signature") or {}).get("signature")
+    return None
+
+
 async def receive_webhook(
     db: AsyncSession, provider: str, request: Request
 ) -> WebhookReceiptResponse:
@@ -55,8 +66,8 @@ async def receive_webhook(
         payload = {"_body": payload}
 
     # TODO(signature): verify before storing signature_valid-style state; for now
-    # the raw signature header is stored for later verification/forensics.
-    signature = request.headers.get(_SIGNATURE_HEADERS.get(provider, ""), None)
+    # the raw signature is stored for later verification/forensics.
+    signature = _extract_signature(provider, request, payload)
 
     dedupe_key = _DEDUPE_EXTRACTORS.get(provider, lambda p: None)(payload)
     if dedupe_key is None:

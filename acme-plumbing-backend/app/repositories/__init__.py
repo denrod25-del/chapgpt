@@ -7,7 +7,7 @@ their own *_repository modules.
 import uuid
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.brand import Brand
@@ -32,11 +32,18 @@ async def get_or_create_contact(
     source: str,
 ) -> Contact:
     """Upsert identity: (brand, email) first, then (brand, phone).
-    Fills in missing email/phone on an existing contact; never overwrites."""
+    Fills in missing email/phone on an existing contact; never overwrites.
+
+    Email match is case-insensitive to mirror the uq_contacts_brand_email
+    partial unique index on lower(email) — an exact-match lookup would miss
+    rows written with different casing and then trip the index on insert."""
     contact: Optional[Contact] = None
     if email:
         result = await db.execute(
-            select(Contact).where(Contact.brand_id == brand_id, Contact.email == email.lower())
+            select(Contact).where(
+                Contact.brand_id == brand_id,
+                func.lower(Contact.email) == email.lower(),
+            )
         )
         contact = result.scalar_one_or_none()
     if contact is None and phone:
