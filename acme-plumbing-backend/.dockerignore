@@ -8,4 +8,5 @@ __pycache__/
 .env.*
 !.env.docker.example
 n8n/
+pgadmin/
 README.md

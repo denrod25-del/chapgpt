@@ -1,12 +1,13 @@
 # Local-dev stack for the Acme Plumbing marketing backend.
 #
-#   db      Postgres 16 — PRODUCT DATA ONLY (leads, bookings, events, ...)
-#   migrate one-shot: applies migrations/001_initial_schema.sql, then exits
-#   api     FastAPI backend (system of record)
-#   n8n     orchestration layer — keeps its OWN state (SQLite) in a dedicated
-#           named volume (n8n_data). It deliberately does NOT use the app's
-#           Postgres, so product data and workflow metadata stay separate and
-#           there are fewer moving parts for local dev.
+#   db       Postgres 16 — PRODUCT DATA ONLY (leads, bookings, events, ...)
+#   migrate  one-shot: applies migrations/001_initial_schema.sql, then exits
+#   api      FastAPI backend (system of record)
+#   pgadmin  web UI for the product DB (auto-registers the db server)
+#   n8n      orchestration layer — keeps its OWN state (SQLite) in a dedicated
+#            named volume (n8n_data). It deliberately does NOT use the app's
+#            Postgres, so product data and workflow metadata stay separate and
+#            there are fewer moving parts for local dev.
 #
 # Zero-config: `docker compose up --build` runs with the ${VAR:-default}
 # fallbacks below. To override (secrets, ports), copy .env.docker.example to
@@ -82,12 +83,41 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
     ports:
       - "${API_PORT:-8000}:8000"
+    # /health is static (no DB), so it turns healthy as soon as uvicorn serves.
+    # Uses the Python stdlib — python:3.12-slim has no curl/wget.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Email must be RFC-valid or pgAdmin refuses to start; example.com always validates.
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      # Desktop mode: skip the login screen + master-password prompt for local dev.
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      # Auto-register the product DB server on first run (imported only when the
+      # pgadmin_data volume is empty). Password is entered on first connect.
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
 
   n8n:
     image: n8nio/n8n:latest
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     environment:
       # --- n8n runtime (own SQLite persisted in the n8n_data volume) --------
       N8N_HOST: localhost
@@ -127,5 +157,6 @@ services:
       - "${N8N_PORT:-5678}:5678"
 
 volumes:
-  pgdata:      # product database
-  n8n_data:    # n8n's own SQLite + encryption key + local files
+  pgdata:        # product database
+  pgadmin_data:  # pgAdmin preferences + registered servers
+  n8n_data:      # n8n's own SQLite + encryption key + local files

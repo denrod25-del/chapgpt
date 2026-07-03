@@ -31,8 +31,9 @@ Brings up product Postgres, the migrator, the API, and n8n with one command:
 
 ```bash
 docker compose up --build
-# API   → http://localhost:8000/health
-# n8n   → http://localhost:5678
+# API      → http://localhost:8000/health
+# n8n      → http://localhost:5678
+# pgAdmin  → http://localhost:5050
 # (optional) cp .env.docker.example .env   # to override ports/secrets
 ```
 
@@ -42,8 +43,15 @@ Services (`docker-compose.yml`):
 |---|---|---|
 | `db` | Postgres 16 — **product data only** | `pgdata` volume |
 | `migrate` | applies `001_initial_schema.sql` once, then exits (idempotent) | — |
-| `api` | FastAPI backend (system of record) | stateless |
+| `api` | FastAPI backend (system of record) | stateless (Python-stdlib healthcheck) |
+| `pgadmin` | web UI for the product DB | `pgadmin_data` volume |
 | `n8n` | orchestration layer | **own `n8n_data` volume (SQLite)** |
+
+**pgAdmin:** open http://localhost:5050 (desktop mode — no login prompt). The
+product DB is pre-registered as **"Acme Product DB"**; expand it and enter the
+password `acme` (the `POSTGRES_PASSWORD` default) on first connect. Override the
+pgAdmin login and port via `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD`
+/ `PGADMIN_PORT` in `.env`.
 
 **Why n8n keeps its own volume, not the app's Postgres:** for local dev this
 keeps product data and workflow metadata separate and cuts moving parts — n8n
