@@ -1,12 +1,15 @@
 """WiYW marketing backend — FastAPI entrypoint."""
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from .config import config
-from .models.db import init_pool, close_pool
-from .routers import leads, webhooks, events, bookings, quotes_reviews
 
-logging.basicConfig(level=logging.INFO)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .api.v1 import api_router
+from .core.config import config
+from .db.session import close_pool, init_pool
+
+logging.basicConfig(level=getattr(logging, config.LOG_LEVEL.upper(), logging.INFO))
 
 
 @asynccontextmanager
@@ -17,17 +20,17 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(title="WiYW Marketing Backend", version="0.1.0", lifespan=lifespan)
-app.include_router(leads.router)
-app.include_router(webhooks.router)
-app.include_router(events.router)
-app.include_router(bookings.bookings_router)
-app.include_router(bookings.jobs_router)
-app.include_router(quotes_reviews.quotes_router)
-app.include_router(quotes_reviews.reviews_router)
-app.include_router(quotes_reviews.webhooks_ext)
+app = FastAPI(title="WiYW Marketing Backend", version="1.0.0", lifespan=lifespan)
 
+if config.CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.CORS_ORIGINS,
+        allow_methods=["GET", "POST", "PATCH"],
+        allow_headers=["content-type", "idempotency-key"],
+    )
 
-@app.get("/health")
-async def health() -> dict:
-    return {"status": "ok", "brand": config.BRAND}
+# Versioned contract + legacy unprefixed paths during the frontend transition.
+# Drop the legacy mount once the site and all provider webhook URLs use /api/v1.
+app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, include_in_schema=False)

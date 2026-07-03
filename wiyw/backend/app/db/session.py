@@ -1,6 +1,7 @@
 """Async Postgres pool (asyncpg). Single source of truth for connections."""
 import asyncpg
-from ..config import config
+
+from ..core.config import config
 
 _pool: asyncpg.Pool | None = None
 

@@ -1,11 +1,9 @@
-"""Extended schemas (Section 12) — bookings, jobs, quotes, reviews, webhooks."""
-import re
+"""Booking + job schemas."""
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
 
-E164 = re.compile(r"^\+[1-9]\d{7,14}$")
+from pydantic import BaseModel, Field, field_validator
 
 
 class BookingStatus(str, Enum):
@@ -34,6 +32,18 @@ class BookingStatusUpdate(BaseModel):
     status: BookingStatus
 
 
+class BookingOut(BaseModel):
+    id: str
+    customer_id: str
+    lead_id: Optional[str]
+    scheduled_for: datetime
+    service_type: str
+    status: BookingStatus
+    reminder_24h_sent: bool
+    reminder_2h_sent: bool
+    created_at: datetime
+
+
 class JobIn(BaseModel):
     booking_id: Optional[str] = None
     customer_id: str
@@ -45,27 +55,3 @@ class JobIn(BaseModel):
 class JobComplete(BaseModel):
     amount: float = Field(ge=0)
     completed_at: Optional[datetime] = None
-
-
-class QuoteIn(BaseModel):
-    full_name: str = Field(min_length=1, max_length=200)
-    phone: str
-    email: Optional[str] = None
-    service_type: str = Field(min_length=1, max_length=50)
-    details: Optional[str] = Field(default=None, max_length=2000)
-    source: str = "website"
-
-    @field_validator("phone")
-    @classmethod
-    def _phone(cls, v: str) -> str:
-        v = v.strip()
-        assert E164.match(v), "phone must be E.164"
-        return v
-
-
-class ReviewIn(BaseModel):
-    customer_id: Optional[str] = None
-    job_id: Optional[str] = None
-    rating: int = Field(ge=1, le=5)
-    platform: str = Field(pattern="^(google|facebook|internal)$")
-    content: Optional[str] = Field(default=None, max_length=4000)

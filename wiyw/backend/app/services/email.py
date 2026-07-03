@@ -1,7 +1,10 @@
-"""Transactional email: Resend primary, Mailgun failover. Returns success bool."""
+"""Transactional email service: Resend primary, Mailgun failover, templates.
+Callers never pick Mailgun — failover is this service's decision (docs/OWNERSHIP.md)."""
 import logging
-import httpx
-from ..config import config
+from typing import Optional
+
+from ..core.config import config
+from ..integrations import mailgun, resend
 
 log = logging.getLogger("wiyw.email")
 
@@ -19,46 +22,29 @@ def _confirm_html(name: str, service: str, phone: str) -> str:
     )
 
 
-async def send_confirmation(to: str, name: str, service: str) -> bool:
-    """Send lead confirmation. Tries Resend, then Mailgun. False if both fail."""
+def review_request_html(name: str, review_link: str) -> str:
+    return (
+        f"<p>Hi {name},</p>"
+        f"<p>Thanks for choosing {config.BRAND}! If you have 60 seconds, a quick "
+        f"review helps other Palm Beach County homeowners find us:</p>"
+        f"<p><a href='{review_link}'>Leave a review</a></p>"
+        f"<p>— {config.BRAND}</p>"
+    )
+
+
+async def send(to: str, subject: str, html: str) -> tuple[bool, Optional[str]]:
+    """Send a transactional email. Returns (success, winning_provider)."""
     if not to:
-        return False
-    html = _confirm_html(name, service, config.BRAND_PHONE)
-    if await _resend(to, _CONFIRM_SUBJECT, html):
-        return True
+        return False, None
+    if await resend.send_email(to, subject, html):
+        return True, "resend"
     log.warning("Resend failed for %s; trying Mailgun", to)
-    return await _mailgun(to, _CONFIRM_SUBJECT, html)
+    if await mailgun.send_email(to, subject, html):
+        return True, "mailgun"
+    return False, None
 
 
-async def _resend(to: str, subject: str, html: str) -> bool:
-    if not config.RESEND_API_KEY:
-        return False
-    try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            r = await c.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {config.RESEND_API_KEY}"},
-                json={"from": f"{config.BRAND} <hello@mail.whatsinyourwater.com>",
-                      "to": [to], "subject": subject, "html": html},
-            )
-        return r.status_code < 300
-    except httpx.HTTPError as e:
-        log.error("Resend transport error: %s", e)
-        return False
-
-
-async def _mailgun(to: str, subject: str, html: str) -> bool:
-    if not (config.MAILGUN_API_KEY and config.MAILGUN_DOMAIN):
-        return False
-    try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            r = await c.post(
-                f"https://api.mailgun.net/v3/{config.MAILGUN_DOMAIN}/messages",
-                auth=("api", config.MAILGUN_API_KEY),
-                data={"from": f"{config.BRAND} <hello@{config.MAILGUN_DOMAIN}>",
-                      "to": to, "subject": subject, "html": html},
-            )
-        return r.status_code < 300
-    except httpx.HTTPError as e:
-        log.error("Mailgun transport error: %s", e)
-        return False
+async def send_confirmation(to: str, name: str, service: str) -> bool:
+    """Send lead/booking confirmation. Tries Resend, then Mailgun. False if both fail."""
+    ok, _ = await send(to, _CONFIRM_SUBJECT, _confirm_html(name, service, config.BRAND_PHONE))
+    return ok

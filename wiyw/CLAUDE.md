@@ -33,7 +33,7 @@ NASA-light (default), Pragma (throwaway).
 ## Repo layout
 ```
 backend/     FastAPI + Postgres. BOOT-TESTED. Canonical. Start here.
-  app/       routers/ services/ models/ + main.py, config.py
+  app/       api/v1/ core/ db/ models/ schemas/ services/ integrations/ webhooks/ + main.py
   migrations/ 001-005 apply in order. down.sql reverses each.
 n8n/         4 importable workflow JSONs + WORKFLOWS.md + WF5 spec (review monitoring)
 storyblok/   React components + tokens.css + component-schemas.json + preview-homepage.html
