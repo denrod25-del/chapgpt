@@ -1,0 +1,368 @@
+{
+  "name": "06 Lead Reactivation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-reactivation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5d39add8-b54f-4b64-9f77-fad7655959ef",
+      "name": "Reactivation Batch Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ],
+      "webhookId": "a3c44820-562c-46f7-92f6-61bc5f8fee5e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter the posted batch down to reactivation-eligible contacts.\n// Eligibility: inactive >= min_days_inactive (default 270), reachable by\n// SMS (phone + consent not revoked) or email.\nconst body = $input.first().json.body || {};\nconst contacts = Array.isArray(body.contacts) ? body.contacts : [];\nconst minDays = Number(body.min_days_inactive) || 270;\nconst now = Date.now();\nconst out = [];\nfor (const c of contacts) {\n  const phone = (typeof c.phone === 'string' ? c.phone.trim() : '') || null;\n  const email = (typeof c.email === 'string' ? c.email.trim().toLowerCase() : '') || null;\n  const last = Date.parse(c.last_job_at || c.last_activity_at || '');\n  const days_inactive = Number.isNaN(last) ? null : Math.floor((now - last) / 86400000);\n  if (days_inactive !== null && days_inactive < minDays) continue;\n  const smsOk = !!phone && c.consent_sms !== false;\n  if (!smsOk && !email) continue;\n  out.push({ json: {\n    contact_id: c.contact_id || null,\n    first_name: (typeof c.first_name === 'string' && c.first_name.trim()) || 'there',\n    phone, email,\n    channel: smsOk ? 'sms' : 'email',\n    days_inactive,\n  } });\n}\nif (out.length === 0) return [{ json: { none: true } }];\nreturn out;"
+      },
+      "id": "046df7a9-dad9-47c7-ad58-9202ccabc3f2",
+      "name": "Filter Eligible Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9d9b847d-fbbd-4ba7-a4d8-8c77798fd26c",
+              "leftValue": "={{ $json.none === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a166ea06-e21a-4e47-8d75-e44f3dd11c1d",
+      "name": "Nothing To Do?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, processed: 0, note: 'no reactivation-eligible contacts in batch' } }}",
+        "options": {}
+      },
+      "id": "6d6caefe-30dd-474e-90d9-935c3e6590a9",
+      "name": "Respond Empty Batch",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bdb73d5e-ec90-48c4-b571-d5dfd90c98cd",
+              "leftValue": "={{ $json.channel === 'sms' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "42f656ca-3904-4069-8202-ab4f0a4f2ded",
+      "name": "SMS Channel?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/gatewayapi/send-sms",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.phone, message: 'Acme Plumbing: Hi ' + $json.first_name + '! It has been a while \u2014 time for your annual plumbing check-up? Book this week and we will waive the trip fee. Reply STOP to opt out.', template: 'sms_reactivation', customer_id: $json.contact_id }) }}"
+      },
+      "id": "2ca394cb-4a8e-4ad4-b59d-ad7f2efbbfab",
+      "name": "Send Reactivation SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/brevo/sync-contact",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $json.email, phone: $json.phone, attributes: { FIRSTNAME: $json.first_name, STATUS: 'reactivation', DAYS_INACTIVE: $json.days_inactive || 0 } }) }}"
+      },
+      "id": "b3ff441c-f3b5-4e1a-ae43-95684e187c56",
+      "name": "Sync Reactivation to Brevo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        40
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "46afd6f5-0136-40ea-b28a-375ae903fb51",
+      "name": "Merge Channels",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        880,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/events",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ brand_slug: $env.DEFAULT_BRAND_SLUG || 'acme-plumbing', event_name: 'reactivation_message_sent', event_source: 'n8n', contact_id: $('Filter Eligible Contacts').item.json.contact_id, payload: { workflow: '06_lead_reactivation', channel: $('Filter Eligible Contacts').item.json.channel, days_inactive: $('Filter Eligible Contacts').item.json.days_inactive } }) }}"
+      },
+      "id": "f3ea9a06-de35-491c-a914-7abedca655c3",
+      "name": "Log Reactivation Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Batch summary from the filtered contact list (channel info lives there).\nconst items = $('Filter Eligible Contacts').all().map((i) => i.json);\nreturn [{ json: {\n  success: true,\n  processed: items.length,\n  sms_sent: items.filter((i) => i.channel === 'sms').length,\n  email_synced: items.filter((i) => i.channel === 'email').length,\n} }];"
+      },
+      "id": "7f3f1495-4cb5-45f3-adde-d8c7c2c39816",
+      "name": "Summarize Batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "d50f9fa3-243f-4616-bbde-7b6903f2b7c9",
+      "name": "Respond Batch Summary",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        -60
+      ]
+    }
+  ],
+  "connections": {
+    "Reactivation Batch Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Eligible Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Eligible Contacts": {
+      "main": [
+        [
+          {
+            "node": "Nothing To Do?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nothing To Do?": {
+      "main": [
+        [
+          {
+            "node": "Respond Empty Batch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SMS Channel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Channel?": {
+      "main": [
+        [
+          {
+            "node": "Send Reactivation SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sync Reactivation to Brevo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reactivation SMS": {
+      "main": [
+        [
+          {
+            "node": "Merge Channels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Reactivation to Brevo": {
+      "main": [
+        [
+          {
+            "node": "Merge Channels",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Channels": {
+      "main": [
+        [
+          {
+            "node": "Log Reactivation Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Reactivation Event": {
+      "main": [
+        [
+          {
+            "node": "Summarize Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Batch": {
+      "main": [
+        [
+          {
+            "node": "Respond Batch Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d152e53b-7ae4-4e3b-b28e-6861461f4c53",
+  "pinData": {}
+}

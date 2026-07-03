@@ -1,0 +1,533 @@
+{
+  "name": "02 Quote Request",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quote-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "44981312-c4d2-40a8-bab8-ea17e2f79285",
+      "name": "Quote Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ],
+      "webhookId": "0bf29856-f206-4460-854b-dc59290cf854"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize inbound payload -> backend lead schema + stable idempotency key.\nconst b = $input.first().json.body || {};\nconst str = (v) => (typeof v === 'string' ? v.trim() : '');\nconst nameParts = str(b.name).split(' ');\nconst first_name = str(b.first_name) || nameParts[0] || '';\nconst last_name = str(b.last_name) || nameParts.slice(1).join(' ') || null;\nconst email = (str(b.email) || '').toLowerCase() || null;\nconst phone = str(b.phone) || null;\n\n// djb2 string hash: stable idempotency key without needing the crypto module.\nconst djb2 = (s) => { let h = 5381; for (const c of s) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return h.toString(16); };\nconst idempotency_key = str(b.submission_id) || ('quote-' + djb2([phone, email, str(b.message), str(b.page_url)].join('|')));\n\nconst errors = [];\nif (!first_name) errors.push('first_name is required');\nif (!email && !phone) errors.push('email or phone is required');\nif (phone && !/^\\+[1-9]\\d{7,14}$/.test(phone)) errors.push('phone must be E.164 (e.g. +15615551212)');\n\nconst urgencyRaw = str(b.urgency).toLowerCase();\nconst is_emergency = ['emergency', 'same_day', 'asap'].includes(urgencyRaw);\n\nconst lead = {\n  brand_slug: str(b.brand_slug) || $env.DEFAULT_BRAND_SLUG || 'acme-plumbing',\n  lead_type: 'quote_request',\n  first_name,\n  last_name,\n  email,\n  phone,\n  service_type: str(b.service_type) || null,\n  urgency: is_emergency ? 'emergency' : 'standard',\n  message: str(b.message) || null,\n  source: str(b.source) || 'website_form',\n  page_url: str(b.page_url) || null,\n  utm: (b.utm && typeof b.utm === 'object') ? b.utm : {},\n  meta: { urgency_raw: urgencyRaw || null },\n  idempotency_key,\n};\nreturn [{ json: { valid: errors.length === 0, error: errors.join('; '), lead, first_name, email, phone, is_emergency } }];"
+      },
+      "id": "097a833e-e3f1-4486-a731-d3555ebe6bc8",
+      "name": "Normalize Quote Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7eef16f5-5d16-4e24-8a51-ec3eed724441",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a297b1e6-4888-4571-9901-618701a8698d",
+      "name": "Valid Payload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'validation_failed' } }}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "id": "d953f4a5-7958-4ad4-9baa-5aa3f6d5156f",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/leads",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.lead.idempotency_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.lead) }}"
+      },
+      "id": "16cca98f-4b5b-4889-9872-4a5354249d77",
+      "name": "Create Lead in FastAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        -60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ec1a002f-d19c-4782-899b-692dbc8257d2",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "131ee0e7-7916-416e-9da4-0bd338f30896",
+      "name": "Lead Created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: 'lead_create_failed', detail: ($json.error && $json.error.message) || 'backend unavailable' } }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "10f399bb-edda-424e-86d2-509a02c2dc9a",
+      "name": "Respond Backend Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/brevo/sync-contact",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ email: $('Normalize Quote Lead').first().json.email, phone: $('Normalize Quote Lead').first().json.phone, lead_id: $('Lead Created?').first().json.id, attributes: { FIRSTNAME: $('Normalize Quote Lead').first().json.first_name, SERVICE_TYPE: $('Normalize Quote Lead').first().json.lead.service_type || '', STATUS: 'quote_requested' } }) }}"
+      },
+      "id": "16cfe7a8-788a-4b2d-bc96-073bb3eb40ae",
+      "name": "Sync Contact to Brevo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9844bd45-a314-43b8-8a44-8487fe3ddac4",
+              "leftValue": "={{ $('Normalize Quote Lead').first().json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "548e4fb2-8675-4e5a-b01e-cfec2e17b099",
+      "name": "Has Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/resend/send-email",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Normalize Quote Lead').first().json.email, subject: 'Your Acme Plumbing quote request', html: '<p>Hi ' + $('Normalize Quote Lead').first().json.first_name + ',</p><p>Thanks for your quote request' + ($('Normalize Quote Lead').first().json.lead.service_type ? ' for ' + $('Normalize Quote Lead').first().json.lead.service_type.replace(/_/g, ' ') : '') + '. We are preparing it now and will follow up shortly.</p><p>\u2014 Acme Plumbing</p>', template: 'txn_quote_confirmation', lead_id: $('Lead Created?').first().json.id }) }}"
+      },
+      "id": "03997abd-e431-41b5-ad63-1442b5291649",
+      "name": "Send Quote Confirmation Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/gatewayapi/send-sms",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Normalize Quote Lead').first().json.phone, message: 'Acme Plumbing: Thanks ' + $('Normalize Quote Lead').first().json.first_name + '! We are preparing your quote and will follow up shortly. Reply STOP to opt out.', template: 'sms_quote_ack', lead_id: $('Lead Created?').first().json.id }) }}"
+      },
+      "id": "79879e75-c397-488e-9d36-c0604a4206c4",
+      "name": "Send Quote Ack SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -20
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "11d82590-fd39-4303-8502-c76201ffe208",
+      "name": "Merge Channels",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1540,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.INTERNAL_ALERT_WEBHOOK_URL }}",
+        "options": {
+          "timeout": 10000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: 'New quote request: ' + $('Normalize Quote Lead').first().json.first_name + ' \u00b7 ' + ($('Normalize Quote Lead').first().json.lead.service_type || 'unspecified') + ' \u00b7 ' + ($('Normalize Quote Lead').first().json.phone || $('Normalize Quote Lead').first().json.email) }) }}"
+      },
+      "id": "40fd56e7-8e75-4fa3-ad47-cfaa6e73b222",
+      "name": "Notify Internal Team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/events",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ brand_slug: $env.DEFAULT_BRAND_SLUG || 'acme-plumbing', event_name: 'quote_followup_started', event_source: 'n8n', lead_id: $('Lead Created?').first().json.id, payload: { workflow: '02_quote_request', channel: $('Normalize Quote Lead').first().json.email ? 'email' : 'sms' } }) }}"
+      },
+      "id": "b097d4e0-43e7-433c-a51e-ed5d19f3efdc",
+      "name": "Log Quote Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, lead_id: $('Lead Created?').first().json.id, lead_type: 'quote_request', next_step: 'quote_preparation' } }}",
+        "options": {}
+      },
+      "id": "62543ff9-9f8a-4201-bf30-107d9141eeeb",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Quote Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Quote Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Quote Lead": {
+      "main": [
+        [
+          {
+            "node": "Valid Payload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Payload?": {
+      "main": [
+        [
+          {
+            "node": "Create Lead in FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead in FastAPI": {
+      "main": [
+        [
+          {
+            "node": "Lead Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Created?": {
+      "main": [
+        [
+          {
+            "node": "Sync Contact to Brevo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Backend Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Contact to Brevo": {
+      "main": [
+        [
+          {
+            "node": "Has Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Email?": {
+      "main": [
+        [
+          {
+            "node": "Send Quote Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Quote Ack SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Quote Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Merge Channels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Quote Ack SMS": {
+      "main": [
+        [
+          {
+            "node": "Merge Channels",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Channels": {
+      "main": [
+        [
+          {
+            "node": "Notify Internal Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Internal Team": {
+      "main": [
+        [
+          {
+            "node": "Log Quote Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Quote Event": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a72f6d95-874d-4462-96af-a016b6b72d2e",
+  "pinData": {}
+}

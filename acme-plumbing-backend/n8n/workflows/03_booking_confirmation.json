@@ -1,0 +1,456 @@
+{
+  "name": "03 Booking Confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "booking-confirmation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5f098d73-7344-411e-842c-6eb1357b07b1",
+      "name": "Booking Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ],
+      "webhookId": "0d73b221-ac91-4bb1-9d70-c6a5f8a436db"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize inbound booking payload -> backend booking schema.\nconst b = $input.first().json.body || {};\nconst str = (v) => (typeof v === 'string' ? v.trim() : '');\nconst first_name = str(b.first_name);\nconst last_name = str(b.last_name) || null;\nconst email = (str(b.email) || '').toLowerCase() || null;\nconst phone = str(b.phone) || null;\nconst tz = str(b.timezone) || $env.DEFAULT_TIMEZONE || 'America/New_York';\n\nconst errors = [];\nif (!first_name) errors.push('first_name is required');\nif (!email && !phone) errors.push('email or phone is required');\nif (phone && !/^\\+[1-9]\\d{7,14}$/.test(phone)) errors.push('phone must be E.164');\nconst ts = Date.parse(b.scheduled_for || '');\nif (Number.isNaN(ts)) errors.push('scheduled_for must be a valid ISO datetime');\nelse if (ts < Date.now()) errors.push('scheduled_for must be in the future');\n\nconst when_text = Number.isNaN(ts) ? '' : new Date(ts).toLocaleString('en-US',\n  { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });\n\nconst booking = {\n  brand_slug: str(b.brand_slug) || $env.DEFAULT_BRAND_SLUG || 'acme-plumbing',\n  lead_id: b.lead_id || null,\n  first_name,\n  last_name,\n  email,\n  phone,\n  scheduled_for: b.scheduled_for,\n  timezone: tz,\n  service_address: (b.service_address && typeof b.service_address === 'object') ? b.service_address : {},\n  notes: str(b.notes) || null,\n};\nreturn [{ json: { valid: errors.length === 0, error: errors.join('; '), booking, first_name, email, phone, when_text } }];"
+      },
+      "id": "9f543ed2-fb2b-405a-b8bb-f5fcb0c17abf",
+      "name": "Normalize Booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2ffb81e4-7f37-4894-881c-6e0341655b6a",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9847f81f-8eb9-4c8a-8cbc-27aca2186c71",
+      "name": "Valid Payload?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: $json.error || 'validation_failed' } }}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "id": "e24717e3-b3a8-43df-9932-5ef73f22b9e5",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/bookings",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.booking) }}"
+      },
+      "id": "a7553e2e-8cab-4d55-a4ed-5fd759f21c36",
+      "name": "Create Booking in FastAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        -60
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3ba3a551-d5aa-4959-81b1-da4107463229",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0e9cbe88-a06b-43bc-910c-a133e154572c",
+      "name": "Booking Created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, error: 'booking_create_failed', detail: ($json.error && $json.error.message) || 'backend unavailable' } }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "bc139aff-2422-4184-8152-4667d341bb8a",
+      "name": "Respond Backend Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7976cc31-1c9f-4185-854c-2d168cbc3faa",
+              "leftValue": "={{ $('Normalize Booking').first().json.phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e881ecb7-28f2-4236-8bda-a898ecab7f37",
+      "name": "Has Phone?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/gatewayapi/send-sms",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Normalize Booking').first().json.phone, message: 'Acme Plumbing: You are booked for ' + $('Normalize Booking').first().json.when_text + '. Reply C to confirm or call us with questions.', template: 'sms_booking_confirm' }) }}"
+      },
+      "id": "9335501a-c8f5-4b25-bad5-b90b50bb1f0d",
+      "name": "Send Booking SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/integrations/resend/send-email",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $('Normalize Booking').first().json.email, subject: 'Your Acme Plumbing appointment is booked', html: '<p>Hi ' + $('Normalize Booking').first().json.first_name + ',</p><p>You are booked for <strong>' + $('Normalize Booking').first().json.when_text + '</strong>.</p><p>\u2014 Acme Plumbing</p>', template: 'txn_booking_confirmation' }) }}"
+      },
+      "id": "adee4508-3be8-40a1-b18d-dbb7de695c20",
+      "name": "Send Booking Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        -20
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "id": "0d76d380-2009-42fe-8e0b-7725b0cb381b",
+      "name": "Merge Channels",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1320,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.API_BASE_URL }}/api/v1/events",
+        "options": {
+          "timeout": 10000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.INTERNAL_API_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ brand_slug: $env.DEFAULT_BRAND_SLUG || 'acme-plumbing', event_name: 'booking_confirmed', event_source: 'n8n', booking_id: $('Booking Created?').first().json.id, lead_id: $('Normalize Booking').first().json.booking.lead_id, payload: { workflow: '03_booking_confirmation', scheduled_for: $('Normalize Booking').first().json.booking.scheduled_for } }) }}"
+      },
+      "id": "66073684-071d-4f85-9bec-685975bbabe3",
+      "name": "Log Booking Confirmed Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, booking_id: $('Booking Created?').first().json.id, booking_status: $('Booking Created?').first().json.booking_status, scheduled_for: $('Booking Created?').first().json.scheduled_for, next_step: 'appointment_reminder' } }}",
+        "options": {}
+      },
+      "id": "f653f99e-d59f-470e-ac30-2defea7d2d3e",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        -120
+      ]
+    }
+  ],
+  "connections": {
+    "Booking Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Booking": {
+      "main": [
+        [
+          {
+            "node": "Valid Payload?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Payload?": {
+      "main": [
+        [
+          {
+            "node": "Create Booking in FastAPI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Booking in FastAPI": {
+      "main": [
+        [
+          {
+            "node": "Booking Created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booking Created?": {
+      "main": [
+        [
+          {
+            "node": "Has Phone?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Backend Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone?": {
+      "main": [
+        [
+          {
+            "node": "Send Booking SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Booking Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Booking SMS": {
+      "main": [
+        [
+          {
+            "node": "Merge Channels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Booking Email": {
+      "main": [
+        [
+          {
+            "node": "Merge Channels",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Channels": {
+      "main": [
+        [
+          {
+            "node": "Log Booking Confirmed Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Booking Confirmed Event": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d369dfef-6d1b-46ec-a379-b9a6571d328b",
+  "pinData": {}
+}
