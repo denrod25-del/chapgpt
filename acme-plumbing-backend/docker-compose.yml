@@ -1,0 +1,131 @@
+# Local-dev stack for the Acme Plumbing marketing backend.
+#
+#   db      Postgres 16 — PRODUCT DATA ONLY (leads, bookings, events, ...)
+#   migrate one-shot: applies migrations/001_initial_schema.sql, then exits
+#   api     FastAPI backend (system of record)
+#   n8n     orchestration layer — keeps its OWN state (SQLite) in a dedicated
+#           named volume (n8n_data). It deliberately does NOT use the app's
+#           Postgres, so product data and workflow metadata stay separate and
+#           there are fewer moving parts for local dev.
+#
+# Zero-config: `docker compose up --build` runs with the ${VAR:-default}
+# fallbacks below. To override (secrets, ports), copy .env.docker.example to
+# .env — Compose reads it automatically.
+
+name: acme-plumbing
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-acme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-acme}
+      POSTGRES_DB: ${POSTGRES_DB:-acme_marketing}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acme} -d ${POSTGRES_DB:-acme_marketing}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-acme}
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: ["sh", "-c"]
+    # Idempotent: only applies the schema when the 'brands' table is absent,
+    # so re-running `docker compose up` on an existing volume is a no-op.
+    command:
+      - |
+        set -e
+        applied=$$(psql -h db -U ${POSTGRES_USER:-acme} -d ${POSTGRES_DB:-acme_marketing} -tAc "SELECT to_regclass('public.brands')")
+        if [ -z "$$applied" ]; then
+          echo "Applying migrations/001_initial_schema.sql ...";
+          psql -h db -U ${POSTGRES_USER:-acme} -d ${POSTGRES_DB:-acme_marketing} -v ON_ERROR_STOP=1 -f /migrations/001_initial_schema.sql;
+          echo "Migration complete.";
+        else
+          echo "Schema already present; skipping migration.";
+        fi
+    restart: "no"
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_NAME: Acme Plumbing Marketing Backend
+      APP_ENV: dev
+      APP_DEBUG: "true"
+      API_V1_PREFIX: /api/v1
+      DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-America/New_York}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-acme}:${POSTGRES_PASSWORD:-acme}@db:5432/${POSTGRES_DB:-acme_marketing}
+      # n8n (browser origin) is what calls the API during local testing.
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5678}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_BASE_URL: ${BREVO_BASE_URL:-https://api.brevo.com/v3}
+      GATEWAYAPI_API_TOKEN: ${GATEWAYAPI_API_TOKEN:-}
+      GATEWAYAPI_BASE_URL: ${GATEWAYAPI_BASE_URL:-https://gatewayapi.com/rest}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  n8n:
+    image: n8nio/n8n:latest
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      # --- n8n runtime (own SQLite persisted in the n8n_data volume) --------
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      # Public base URL the editor uses to build webhook URLs.
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      GENERIC_TIMEZONE: ${DEFAULT_TIMEZONE:-America/New_York}
+      TZ: ${DEFAULT_TIMEZONE:-America/New_York}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      # Local HTTP access — do not disable secure cookies in production.
+      N8N_SECURE_COOKIE: "false"
+      # Stable key so credentials in the volume survive restarts. CHANGE for prod.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-dev-only-change-me-32chars-min}
+      # --- variables the imported workflows read via $env.* ----------------
+      # api:8000 is the in-network hostname; the app is also on localhost:8000.
+      API_BASE_URL: ${N8N_API_BASE_URL:-http://api:8000}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+      DEFAULT_BRAND_SLUG: ${DEFAULT_BRAND_SLUG:-acme-plumbing}
+      DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-America/New_York}
+      # Unset by default -> alert nodes fail softly (they are continue-on-error).
+      # Set to a Slack/Teams incoming-webhook URL to receive team pings.
+      INTERNAL_ALERT_WEBHOOK_URL: ${INTERNAL_ALERT_WEBHOOK_URL:-}
+      REVIEW_REQUEST_DELAY_MINUTES: ${REVIEW_REQUEST_DELAY_MINUTES:-120}
+      REMINDER_LEAD_HOURS: ${REMINDER_LEAD_HOURS:-24}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_BASE_URL: ${BREVO_BASE_URL:-https://api.brevo.com/v3}
+      GATEWAYAPI_API_TOKEN: ${GATEWAYAPI_API_TOKEN:-}
+      GATEWAYAPI_BASE_URL: ${GATEWAYAPI_BASE_URL:-https://gatewayapi.com/rest}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Read-only mount so the 8 workflow JSONs can be bulk-imported via the CLI:
+      #   docker compose exec n8n n8n import:workflow --separate --input=/workflows
+      - ./n8n/workflows:/workflows:ro
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+
+volumes:
+  pgdata:      # product database
+  n8n_data:    # n8n's own SQLite + encryption key + local files
