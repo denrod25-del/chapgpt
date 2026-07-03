@@ -175,17 +175,6 @@
       "onError": "continueRegularOutput"
     },
     {
-      "parameters": {},
-      "id": "46afd6f5-0136-40ea-b28a-375ae903fb51",
-      "name": "Merge Channels",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        880,
-        -60
-      ]
-    },
-    {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.API_BASE_URL }}/api/v1/events",
@@ -307,7 +296,7 @@
       "main": [
         [
           {
-            "node": "Merge Channels",
+            "node": "Log Reactivation Event",
             "type": "main",
             "index": 0
           }
@@ -315,17 +304,6 @@
       ]
     },
     "Sync Reactivation to Brevo": {
-      "main": [
-        [
-          {
-            "node": "Merge Channels",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Channels": {
       "main": [
         [
           {

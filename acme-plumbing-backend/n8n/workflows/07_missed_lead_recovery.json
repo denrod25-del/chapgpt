@@ -168,17 +168,6 @@
       "onError": "continueRegularOutput"
     },
     {
-      "parameters": {},
-      "id": "f4ad7b73-6bc0-4a40-ae1b-f2fd685b4369",
-      "name": "Merge Paths",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        1100,
-        -60
-      ]
-    },
-    {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.API_BASE_URL }}/api/v1/events",
@@ -287,25 +276,14 @@
         ],
         [
           {
-            "node": "Merge Paths",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Send We Are On It SMS": {
-      "main": [
-        [
-          {
-            "node": "Merge Paths",
+            "node": "Log Recovery Event",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge Paths": {
+    "Send We Are On It SMS": {
       "main": [
         [
           {

@@ -258,17 +258,6 @@
       "onError": "continueRegularOutput"
     },
     {
-      "parameters": {},
-      "id": "0d76d380-2009-42fe-8e0b-7725b0cb381b",
-      "name": "Merge Channels",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        1320,
-        -120
-      ]
-    },
-    {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.API_BASE_URL }}/api/v1/events",
@@ -406,7 +395,7 @@
       "main": [
         [
           {
-            "node": "Merge Channels",
+            "node": "Log Booking Confirmed Event",
             "type": "main",
             "index": 0
           }
@@ -414,17 +403,6 @@
       ]
     },
     "Send Booking Email": {
-      "main": [
-        [
-          {
-            "node": "Merge Channels",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Channels": {
       "main": [
         [
           {

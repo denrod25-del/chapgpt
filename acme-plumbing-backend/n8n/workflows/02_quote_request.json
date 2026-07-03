@@ -292,17 +292,6 @@
       "onError": "continueRegularOutput"
     },
     {
-      "parameters": {},
-      "id": "11d82590-fd39-4303-8502-c76201ffe208",
-      "name": "Merge Channels",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        1540,
-        -120
-      ]
-    },
-    {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.INTERNAL_ALERT_WEBHOOK_URL }}",
@@ -472,7 +461,7 @@
       "main": [
         [
           {
-            "node": "Merge Channels",
+            "node": "Notify Internal Team",
             "type": "main",
             "index": 0
           }
@@ -480,17 +469,6 @@
       ]
     },
     "Send Quote Ack SMS": {
-      "main": [
-        [
-          {
-            "node": "Merge Channels",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Channels": {
       "main": [
         [
           {
