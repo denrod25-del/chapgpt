@@ -1,0 +1,23 @@
+Alembic migrations for the Plumbing Marketing API.
+
+Layout
+  alembic.ini              config (URL comes from app settings, not here)
+  migrations/env.py        loads DATABASE_URL from app.core.config, targets
+                           app.db.base.target_metadata (Base.metadata)
+  migrations/versions/     revision files (0001_initial_schema.py, ...)
+
+Common commands (run from the project root, with DATABASE_URL set)
+  alembic upgrade head                         apply all migrations
+  alembic downgrade -1                         roll back one revision
+  alembic downgrade base                       roll back everything
+  alembic current                              show the applied revision
+  alembic history --verbose                    show the revision graph
+  alembic revision --autogenerate -m "msg"     create a new revision from model diffs
+  alembic upgrade head --sql                   print SQL without touching the DB
+
+Notes
+  - The app runs async (asyncpg); Alembic runs sync (psycopg). Both DSNs are
+    derived from the single DATABASE_URL in app settings.
+  - After editing models, run autogenerate, then READ the generated file before
+    committing — autogenerate is a draft, not gospel (it can miss server-side
+    defaults, partial indexes, and data migrations).
