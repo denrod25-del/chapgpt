@@ -33,16 +33,11 @@ The local one-shot `migrate` container isn't reproduced 1:1 in the cloud. Pick o
    ```bash
    psql "<EXTERNAL_DATABASE_URL>" -f acme-plumbing-backend/migrations/001_initial_schema.sql
    ```
-2. **Automatic pre-deploy (what `render.yaml` is wired for).** The API service's
-   `preDeployCommand` applies the schema idempotently before each deploy — but
-   that needs `psql` inside the API image. Add these two lines to the Dockerfile:
-   ```dockerfile
-   RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
-       && rm -rf /var/lib/apt/lists/*
-   COPY migrations ./migrations
-   ```
-   (Left out of the default image to keep it slim; add them only if you use the
-   pre-deploy path.)
+2. **Automatic pre-deploy (what `render.yaml` is wired for — works out of the box).**
+   The API service's `preDeployCommand` applies the schema idempotently before
+   each deploy. The Dockerfile already installs `postgresql-client` and copies
+   `migrations/` into the image, so no edit is needed — just deploy the Blueprint
+   and the migration runs itself (and is a no-op once `brands` exists).
 
 ---
 
