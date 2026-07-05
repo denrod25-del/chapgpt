@@ -21,6 +21,57 @@ async def get_brand_id_by_slug(db: AsyncSession, slug: str) -> Optional[uuid.UUI
     return result.scalar_one_or_none()
 
 
+async def single_active_brand_id(db: AsyncSession) -> Optional[uuid.UUID]:
+    """Return the only active brand's id, or None if zero or more than one.
+    Reconciliation uses this to attribute a provider event that has no local
+    communication_logs match — safe only while the deployment is single-brand."""
+    result = await db.execute(select(Brand.id).where(Brand.is_active.is_(True)).limit(2))
+    ids = result.scalars().all()
+    return ids[0] if len(ids) == 1 else None
+
+
+async def find_contact(
+    db: AsyncSession,
+    *,
+    brand_id: uuid.UUID,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+) -> Optional[Contact]:
+    """Locate a contact within a brand by email (case-insensitive) or phone.
+    Used to flag unsubscribe/complaint/bounce signals from provider webhooks."""
+    if email:
+        result = await db.execute(
+            select(Contact).where(
+                Contact.brand_id == brand_id,
+                func.lower(Contact.email) == email.lower(),
+            )
+        )
+        contact = result.scalar_one_or_none()
+        if contact is not None:
+            return contact
+    if phone:
+        result = await db.execute(
+            select(Contact).where(Contact.brand_id == brand_id, Contact.phone == phone)
+        )
+        return result.scalar_one_or_none()
+    return None
+
+
+def add_contact_tags(contact: Contact, *tags: str) -> bool:
+    """Add tags to a contact's tags_json without duplicates. Reassigns the list
+    so SQLAlchemy detects the mutation (JSONB in-place edits aren't tracked).
+    Returns True if anything changed. Caller owns commit."""
+    current = list(contact.tags_json or [])
+    changed = False
+    for tag in tags:
+        if tag not in current:
+            current.append(tag)
+            changed = True
+    if changed:
+        contact.tags_json = current
+    return changed
+
+
 async def get_or_create_contact(
     db: AsyncSession,
     *,

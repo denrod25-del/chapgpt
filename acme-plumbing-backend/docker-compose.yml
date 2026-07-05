@@ -42,19 +42,26 @@ services:
     volumes:
       - ./migrations:/migrations:ro
     entrypoint: ["sh", "-c"]
-    # Idempotent: only applies the schema when the 'brands' table is absent,
-    # so re-running `docker compose up` on an existing volume is a no-op.
+    # 001 is the greenfield schema (not idempotent) so it runs only when 'brands'
+    # is absent. Every later migration (002+) is written idempotently and applied
+    # on each `up`, in sorted order — no migration-tracking table needed yet.
     command:
       - |
         set -e
-        applied=$$(psql -h db -U ${POSTGRES_USER:-acme} -d ${POSTGRES_DB:-acme_marketing} -tAc "SELECT to_regclass('public.brands')")
+        PSQL="psql -h db -U ${POSTGRES_USER:-acme} -d ${POSTGRES_DB:-acme_marketing} -v ON_ERROR_STOP=1"
+        applied=$$($$PSQL -tAc "SELECT to_regclass('public.brands')")
         if [ -z "$$applied" ]; then
           echo "Applying migrations/001_initial_schema.sql ...";
-          psql -h db -U ${POSTGRES_USER:-acme} -d ${POSTGRES_DB:-acme_marketing} -v ON_ERROR_STOP=1 -f /migrations/001_initial_schema.sql;
-          echo "Migration complete.";
+          $$PSQL -f /migrations/001_initial_schema.sql;
         else
-          echo "Schema already present; skipping migration.";
+          echo "Base schema present; skipping 001.";
         fi
+        for f in $$(ls /migrations/*.sql | sort); do
+          case "$$f" in *001_*) continue;; esac
+          echo "Applying $$f ...";
+          $$PSQL -f "$$f";
+        done
+        echo "Migrations complete."
     restart: "no"
 
   api:

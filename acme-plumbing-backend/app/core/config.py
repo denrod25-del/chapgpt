@@ -32,7 +32,20 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
 
     # internal auth for non-public callers (n8n, admin scripts)
-    INTERNAL_API_TOKEN: str = ""
+    INTERNAL_API_TOKEN: str = "change_me_internal_token"
+
+    # inbound webhook security
+    MAILGUN_WEBHOOK_SIGNING_KEY: str = ""     # HMAC-SHA256 key for Mailgun webhooks
+    BREVO_WEBHOOK_SECRET: str = ""            # shared secret sent by Brevo (header/token)
+
+    # lifecycle automation
+    DEFAULT_REVIEW_URL: str = "https://g.page/r/example/review"
+    REVIEW_REQUEST_DEFAULT_DELAY_MINUTES: int = 120
+    APPOINTMENT_REMINDER_LEAD_HOURS: int = 24
+
+    # feature flags — let ops disable side-effecting paths without a redeploy
+    ENABLE_WEBHOOK_PROCESSING: bool = True    # False = store raw only, no reconciliation
+    ENABLE_AUTOMATION_ENDPOINTS: bool = True  # False = /automations/* returns 503
 
     @property
     def database_url_async(self) -> str:

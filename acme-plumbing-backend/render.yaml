@@ -29,9 +29,13 @@ services:
     plan: free
     healthCheckPath: /health
     # Idempotent migration before each deploy (requires psql in the image).
+    # 001 only when the base schema is absent; 002+ are idempotent and applied
+    # every deploy in sorted order.
     preDeployCommand: >-
       sh -c 'psql "$DATABASE_URL" -tAc "SELECT to_regclass('"'"'public.brands'"'"')" | grep -q brands
-      || psql "$DATABASE_URL" -f migrations/001_initial_schema.sql'
+      || psql "$DATABASE_URL" -f migrations/001_initial_schema.sql;
+      for f in $(ls migrations/*.sql | sort); do case "$f" in *001_*) continue;; esac;
+      psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"; done'
     envVars:
       - key: DATABASE_URL
         fromDatabase:

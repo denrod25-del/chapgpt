@@ -43,6 +43,25 @@ class ProcessingStatus(str, Enum):
     skipped_duplicate = "skipped_duplicate"
 
 
+class VerificationStatus(str, Enum):
+    pending = "pending"          # stored, not yet verified
+    verified = "verified"        # signature/secret checked and valid
+    unverified = "unverified"    # provider has no verifiable auth configured
+    invalid = "invalid"          # signature/secret present but failed — side effects skipped
+    unconfigured = "unconfigured"  # verification supported but no key set (dev)
+
+
+class ReviewRequestStatus(str, Enum):
+    pending = "pending"
+    due = "due"
+    sent = "sent"
+    delivered = "delivered"
+    clicked = "clicked"
+    completed = "completed"
+    failed = "failed"
+    canceled = "canceled"
+
+
 class CommChannel(str, Enum):
     email = "email"
     sms = "sms"
