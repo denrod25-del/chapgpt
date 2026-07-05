@@ -2,6 +2,9 @@
 
 create → (n8n polls) fetch_due → mark_sent → [webhook: delivered/clicked] →
 mark_completed (or mark_failed). Each transition writes a canonical event_log row.
+
+`completed` and `canceled` are terminal: a late or duplicate n8n callback cannot
+resurrect a finished request (mark_* becomes an idempotent no-op with updated=False).
 """
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -25,6 +28,9 @@ from app.schemas.review_request import (
     ReviewRequestCreate,
     ReviewRequestOut,
 )
+
+# Once a request reaches one of these it is done; transitions out are refused.
+_TERMINAL = frozenset({"completed", "canceled"})
 
 
 def _to_out(row: ReviewRequest) -> ReviewRequestOut:
@@ -106,6 +112,9 @@ async def mark_review_request_sent(
     db: AsyncSession, rr_id: uuid.UUID, payload: MarkSentRequest
 ) -> ReviewRequestActionOut:
     row = await _load(db, rr_id)
+    if row.status in _TERMINAL:
+        return ReviewRequestActionOut(id=row.id, status=row.status, updated=False)
+
     row.status = "sent"
     row.sent_at = datetime.now(timezone.utc)
     if payload.communication_log_id is not None:
@@ -131,6 +140,9 @@ async def mark_review_request_failed(
     db: AsyncSession, rr_id: uuid.UUID, payload: MarkFailedRequest
 ) -> ReviewRequestActionOut:
     row = await _load(db, rr_id)
+    if row.status in _TERMINAL:
+        return ReviewRequestActionOut(id=row.id, status=row.status, updated=False)
+
     row.status = "failed"
     row.failure_reason = payload.failure_reason
     await event_repository.create(
@@ -148,6 +160,9 @@ async def mark_review_request_completed(
     db: AsyncSession, rr_id: uuid.UUID, payload: MarkCompletedRequest
 ) -> ReviewRequestActionOut:
     row = await _load(db, rr_id)
+    if row.status in _TERMINAL:
+        return ReviewRequestActionOut(id=row.id, status=row.status, updated=False)
+
     row.status = "completed"
     row.completed_at = payload.completed_at or datetime.now(timezone.utc)
     if payload.metadata:

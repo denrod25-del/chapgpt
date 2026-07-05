@@ -37,13 +37,37 @@ _KEPT_HEADERS = (
     "x-sib-webhook-secret", "x-brevo-webhook-secret", "x-webhook-secret",
 )
 
-# Stable dedupe identifier per provider (falls back to a body hash if absent).
+
+def _brevo_dedupe(p: dict) -> Optional[str]:
+    """A single Brevo message emits many events (delivered, opened, click, …) that
+    all share the same `id` / `message-id`. Keying on the identifier alone would
+    drop every event after the first as a duplicate, so the event type is part of
+    the key. Retries of the *same* event still dedupe (same event + identifier)."""
+    ident = p.get("message-id") or p.get("id")
+    if ident is None:
+        return None
+    return f"{p.get('event') or 'event'}:{ident}"
+
+
+def _mailgun_dedupe(p: dict) -> Optional[str]:
+    # The signature token is unique per webhook POST; Mailgun reuses it on retry,
+    # so it dedupes retries while distinguishing separate events.
+    token = (p.get("signature") or {}).get("token")
+    if token:
+        return token
+    event_id = (p.get("event-data") or {}).get("id")
+    return str(event_id) if event_id else None
+
+
+def _gatewayapi_dedupe(p: dict) -> Optional[str]:
+    # One delivery report per (message id, delivery state).
+    return f"{p['id']}:{p.get('status', '')}" if p.get("id") else None
+
+
 _DEDUPE_EXTRACTORS: dict[str, Callable[[dict], Optional[str]]] = {
-    "brevo": lambda p: str(p["id"]) if p.get("id") else (p.get("message-id") and
-             f"{p.get('event')}:{p.get('message-id')}") or None,
-    "mailgun": lambda p: (p.get("signature") or {}).get("token")
-             or ((p.get("event-data") or {}).get("id")),
-    "gatewayapi": lambda p: f"{p['id']}:{p.get('status', '')}" if p.get("id") else None,
+    "brevo": _brevo_dedupe,
+    "mailgun": _mailgun_dedupe,
+    "gatewayapi": _gatewayapi_dedupe,
 }
 
 _EVENT_TYPE_EXTRACTORS: dict[str, Callable[[dict], Optional[str]]] = {
