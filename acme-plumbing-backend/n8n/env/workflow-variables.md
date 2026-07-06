@@ -14,9 +14,9 @@ the n8n host, then restart/reload n8n.
 | `GATEWAYAPI_BASE_URL` | `https://gatewayapi.com/rest` | **Reserved.** Same as above. |
 | `DEFAULT_BRAND_SLUG` | `acme-plumbing` | Fallback `brand_slug` in every normalize Code node and every `POST /api/v1/events` body when the inbound payload omits it. |
 | `DEFAULT_TIMEZONE` | `America/New_York` | Fallback timezone for human-readable appointment times (03 booking SMS/email, 04 reminder SMS). |
-| `INTERNAL_ALERT_WEBHOOK_URL` | Slack/Teams incoming-webhook URL | Team notifications: 02 (new quote), 05 (review request failed), 07 (missed-lead escalation), 08 (🚨 emergency on-call alert). Payload shape: `{"text": "..."}`. |
-| `REVIEW_REQUEST_DELAY_MINUTES` | `120` | 05 — Wait node delay between the job-completed webhook and calling `POST /api/v1/reviews/request`. Set to `1` while testing. |
-| `REMINDER_LEAD_HOURS` | `24` | 04 — reminder fires at `scheduled_for − REMINDER_LEAD_HOURS` (floored to one minute from now if that moment already passed). |
+| `INTERNAL_ALERT_WEBHOOK_URL` | Slack/Teams incoming-webhook URL | Team notifications: 02 (new quote), 07 (missed-lead escalation), 08 (🚨 emergency on-call alert). Payload shape: `{"text": "..."}`. |
+| `REVIEW_REQUEST_DELAY_MINUTES` | `120` | **Backend-side now** (`REVIEW_REQUEST_DEFAULT_DELAY_MINUTES`): the delay applied when a review request is *created* via `POST /api/v1/automations/review-requests`. The 05 poller dispatches whatever the backend reports as due; it no longer waits. |
+| `REMINDER_LEAD_HOURS` | `24` | **Backend-side now** (`APPOINTMENT_REMINDER_LEAD_HOURS`): a booking becomes "due" for a reminder once `scheduled_for` is within this window. The 04 poller sends whatever the backend reports as due. |
 
 Notes:
 
