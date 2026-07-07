@@ -17,6 +17,7 @@ the n8n host, then restart/reload n8n.
 | `INTERNAL_ALERT_WEBHOOK_URL` | Slack/Teams incoming-webhook URL | Team notifications: 02 (new quote), 07 (missed-lead escalation), 08 (🚨 emergency on-call alert). Payload shape: `{"text": "..."}`. |
 | `REVIEW_REQUEST_DELAY_MINUTES` | `120` | **Backend-side now** (`REVIEW_REQUEST_DEFAULT_DELAY_MINUTES`): the delay applied when a review request is *created* via `POST /api/v1/automations/review-requests`. The 05 poller dispatches whatever the backend reports as due; it no longer waits. |
 | `REMINDER_LEAD_HOURS` | `24` | **Backend-side now** (`APPOINTMENT_REMINDER_LEAD_HOURS`): a booking becomes "due" for a reminder once `scheduled_for` is within this window. The 04 poller sends whatever the backend reports as due. |
+| `REVIEW_AFTER_APPOINTMENT_HOURS` | `3` | 03 — hours after a booking's `scheduled_for` at which the review request it schedules becomes due. Defaults to 3 if unset. The 05 poller then dispatches it. |
 
 Notes:
 

@@ -12,7 +12,7 @@ logging, and consent path lives in the backend).
 |---|---|---|
 | `01_new_website_lead.json` | `POST /webhook/new-website-lead` | Normalize + validate lead → create in FastAPI (idempotency key derived) → Brevo sync → confirmation SMS if phone → event → respond |
 | `02_quote_request.json` | `POST /webhook/quote-request` | Same intake with `lead_type=quote_request` → confirmation email (SMS fallback) → internal team alert → event → respond |
-| `03_booking_confirmation.json` | `POST /webhook/booking-confirmation` | Create booking → confirmation SMS (email fallback) with human-formatted local time → `booking_confirmed` event → respond |
+| `03_booking_confirmation.json` | `POST /webhook/booking-confirmation` | Create booking → confirmation SMS (email fallback) with human-formatted local time → `booking_confirmed` event → **schedule a review request** (`scheduled_for + REVIEW_AFTER_APPOINTMENT_HOURS`, dispatched later by 05) → respond |
 | `04_appointment_reminder.json` | **Schedule (every 15 min)** | Poll `GET /automations/appointment-reminders/due` → expand → reminder SMS per booking → `appointment_reminder_sent` event (clears it from the next poll) |
 | `05_review_request.json` | **Schedule (every 15 min)** | Poll `GET /automations/review-requests/due` → expand → SMS or email per `channel` → `mark-sent` on success / `mark-failed` on error |
 | `06_lead_reactivation.json` | `POST /webhook/lead-reactivation` | Accept a batch of stale contacts → filter eligible (inactive ≥ `min_days_inactive`, reachable, SMS consent) → SMS or Brevo per contact → per-contact events → batch summary response |
@@ -35,10 +35,18 @@ logging, and consent path lives in the backend).
   `POST /automations/review-requests/{id}/mark-sent` (success) or `…/mark-failed`
   (failure). `completed`/`canceled` are terminal server-side, so a duplicate
   mark is a safe no-op. **Scheduling** a review request (creating the row) is a
-  separate concern: call `POST /api/v1/automations/review-requests` from your
-  job-completion hook (or the booking flow); this workflow only dispatches the
-  queue. The `delivery-update` endpoint is for relaying provider delivery
-  outcomes and is exercised by the inbound-webhook path, not this poller.
+  separate concern handled by **03**, which calls
+  `POST /api/v1/automations/review-requests` after a booking is confirmed,
+  scheduled for `booking.scheduled_for + REVIEW_AFTER_APPOINTMENT_HOURS`; this
+  workflow only dispatches the queue. The `delivery-update` endpoint is for
+  relaying provider delivery outcomes and is exercised by the inbound-webhook
+  path, not this poller.
+- **03 schedules the review at booking time**, assuming the job runs at its
+  appointment (there is no job-completion signal in this system yet). If a
+  booking is later cancelled, its review request is **not** auto-cancelled —
+  add a cancellation hook that flips the request to `canceled`, or have the
+  backend's due query skip requests whose booking is cancelled, if that matters
+  to you.
 - **Idempotency:** lead-creating workflows (01, 02, 08) derive a stable
   `idempotency_key` (djb2 hash of phone/email/message/page_url, or the caller's
   `submission_id`) and send it both in the body and as an `Idempotency-Key`
@@ -69,6 +77,7 @@ direct-call variants). The review/reminder timing knobs now live on the backend
 | `POST /api/v1/leads` | 01, 02, 08 |
 | `POST /api/v1/bookings`, `GET /api/v1/bookings/{id}` | 03 |
 | `POST /api/v1/events` | 01–04, 06–08 |
+| `POST /api/v1/automations/review-requests` (schedule) | 03 |
 | `GET /api/v1/automations/appointment-reminders/due` | 04 |
 | `GET /api/v1/automations/review-requests/due`, `POST …/{id}/mark-sent`, `POST …/{id}/mark-failed` | 05 |
 | `POST /api/v1/reviews/request` | (legacy immediate send; superseded by the 05 poller) |
