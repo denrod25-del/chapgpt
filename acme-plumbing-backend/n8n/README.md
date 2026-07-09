@@ -43,10 +43,11 @@ logging, and consent path lives in the backend).
   path, not this poller.
 - **03 schedules the review at booking time**, assuming the job runs at its
   appointment (there is no job-completion signal in this system yet). If a
-  booking is later cancelled, its review request is **not** auto-cancelled —
-  add a cancellation hook that flips the request to `canceled`, or have the
-  backend's due query skip requests whose booking is cancelled, if that matters
-  to you.
+  booking is later cancelled or no-shows, the backend's due query already skips
+  its review request (`fetch_due` excludes requests whose linked booking is
+  `cancelled`/`no_show`), so 05 never dispatches it. The request row stays
+  `pending` rather than being explicitly `canceled`; add a cancellation hook
+  that flips it if you want that reflected in its status.
 - **Idempotency:** lead-creating workflows (01, 02, 08) derive a stable
   `idempotency_key` (djb2 hash of phone/email/message/page_url, or the caller's
   `submission_id`) and send it both in the body and as an `Idempotency-Key`

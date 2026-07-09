@@ -2,11 +2,15 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, exists, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.booking import Booking
 from app.models.contact import Contact
 from app.models.review_request import ReviewRequest
+
+# Bookings in these states should never trigger a review ask.
+_DEAD_BOOKING_STATES = ("cancelled", "no_show")
 
 
 async def create(
@@ -59,14 +63,26 @@ async def fetch_due(
     db: AsyncSession, *, limit: int = 100, now: Optional[datetime] = None
 ) -> list[tuple[ReviewRequest, Contact]]:
     """Rows ready to dispatch (pending/due and past schedule), joined to their
-    contact so the caller can build an SMS/email without a second query."""
+    contact so the caller can build an SMS/email without a second query.
+
+    Requests linked to a cancelled / no-show booking are skipped: 03 schedules
+    the review at booking time, so a booking that fell through must not still
+    generate a review ask. Requests with no booking (booking_id NULL) are
+    unaffected."""
     now = now or datetime.now(timezone.utc)
+    dead_booking = exists().where(
+        and_(
+            Booking.id == ReviewRequest.booking_id,
+            Booking.booking_status.in_(_DEAD_BOOKING_STATES),
+        )
+    )
     result = await db.execute(
         select(ReviewRequest, Contact)
         .join(Contact, Contact.id == ReviewRequest.contact_id)
         .where(
             ReviewRequest.status.in_(("pending", "due")),
             ReviewRequest.scheduled_for <= now,
+            ~dead_booking,
         )
         .order_by(ReviewRequest.scheduled_for.asc())
         .limit(limit)
