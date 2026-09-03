@@ -16,6 +16,10 @@ This repository contains website projects recovered from our ChatGPT build histo
    - Path: `pipecraft-pro/` (React + Vite + Tailwind — run `npm install && npm run dev` inside the folder)
    - Plumbing career simulator game: timed service calls with diagnosis/repair scoring, a training academy, a house rough-in build mode with code inspections, and a business management layer. See `pipecraft-pro/README.md`.
 
+4. **Remote Work Signup Tracker**
+   - Path: `money-making-signups/index.html`
+   - Tracker for 13 remote-work and gig platforms (Rev, Clickworker, Toptal, Kelly Connect, Arise and others), covering what each actually is, its real requirements, realistic payout timing, and the caveats for each. Filters by how fast money arrives, plus a shared prep checklist and per-platform application status saved in the browser.
+
 ## Start page
 
 Open `index.html` to see links to all included projects.

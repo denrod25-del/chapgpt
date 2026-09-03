@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Remote Work Signup Tracker</title>
+<style>
+:root{
+  --bg:#0f172a;--card:#111827;--text:#f8fafc;--muted:#94a3b8;--accent:#38bdf8;
+  --line:rgba(255,255,255,.12);--good:#4ade80;--warn:#fbbf24;--bad:#f87171;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background:linear-gradient(135deg,#020617,#0f172a);color:var(--text);min-height:100vh}
+main{max-width:1180px;margin:0 auto;padding:56px 24px 80px}
+h1{font-size:clamp(2.1rem,6vw,4rem);line-height:1.05;margin:0 0 16px}
+.lead{font-size:1.12rem;color:var(--muted);max-width:780px;line-height:1.7;margin:0 0 8px}
+h2{font-size:1.5rem;margin:48px 0 14px}
+a{color:var(--accent)}
+
+/* progress */
+.progress-wrap{margin-top:28px;background:rgba(17,24,39,.85);border:1px solid var(--line);
+  border-radius:20px;padding:20px 22px}
+.progress-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.progress-top strong{font-size:1.05rem}
+.progress-top span{color:var(--muted);font-size:.92rem}
+.bar{height:10px;background:rgba(255,255,255,.09);border-radius:99px;margin-top:14px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#4ade80);
+  border-radius:99px;transition:width .35s ease}
+
+/* prep checklist */
+.prep{background:rgba(17,24,39,.85);border:1px solid var(--line);border-radius:20px;padding:22px 24px}
+.prep p{color:var(--muted);line-height:1.65;margin:0 0 16px}
+.prep ul{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px 24px}
+.prep li{display:flex;gap:11px;align-items:flex-start;line-height:1.5}
+.prep input[type=checkbox]{margin-top:3px;width:17px;height:17px;accent-color:#38bdf8;flex:none;cursor:pointer}
+.prep label{cursor:pointer}
+.prep .why{color:var(--muted);font-size:.88rem;display:block;margin-top:2px}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0 26px}
+.filters button{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--line);
+  border-radius:99px;padding:9px 16px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
+.filters button:hover{background:rgba(255,255,255,.12)}
+.filters button[aria-pressed=true]{background:var(--accent);color:#082f49;border-color:transparent}
+
+/* cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}
+.card{background:rgba(17,24,39,.85);border:1px solid var(--line);border-radius:22px;padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column}
+.card.done{border-color:rgba(74,222,128,.45)}
+.card.out{border-color:rgba(248,113,113,.35);opacity:.62}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.card h3{margin:0 0 4px;font-size:1.22rem}
+.card h3 a{text-decoration:none}
+.card h3 a:hover{text-decoration:underline}
+.kind{color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.speed{flex:none;font-size:.76rem;font-weight:800;padding:5px 10px;border-radius:99px;white-space:nowrap}
+.s-fast{background:rgba(74,222,128,.16);color:var(--good)}
+.s-mid{background:rgba(251,191,36,.16);color:var(--warn)}
+.s-slow{background:rgba(248,113,113,.16);color:var(--bad)}
+.card p.desc{color:#cbd5e1;line-height:1.62;margin:12px 0 0;font-size:.96rem}
+dl{margin:14px 0 0;font-size:.92rem;line-height:1.55}
+dl div{display:flex;gap:8px;padding:5px 0;border-top:1px solid rgba(255,255,255,.07)}
+dt{color:var(--muted);flex:none;width:104px;font-weight:600}
+dd{margin:0;color:#e2e8f0}
+.flag{margin-top:13px;background:rgba(251,191,36,.09);border-left:3px solid var(--warn);
+  border-radius:0 10px 10px 0;padding:9px 12px;font-size:.89rem;line-height:1.55;color:#fde68a}
+.flag.hard{background:rgba(248,113,113,.1);border-left-color:var(--bad);color:#fecaca}
+.status{margin-top:auto;padding-top:16px;display:flex;gap:9px;align-items:center}
+.status select{flex:1;background:#0b1220;color:var(--text);border:1px solid var(--line);
+  border-radius:12px;padding:10px 12px;font-family:inherit;font-size:.92rem;cursor:pointer}
+.status a.go{background:var(--accent);color:#082f49;text-decoration:none;font-weight:800;
+  padding:10px 15px;border-radius:12px;font-size:.9rem;white-space:nowrap}
+
+.note{margin-top:40px;color:var(--muted);font-size:.93rem;line-height:1.7;
+  border-top:1px solid var(--line);padding-top:22px}
+.reset{background:none;border:1px solid var(--line);color:var(--muted);border-radius:10px;
+  padding:7px 13px;font-family:inherit;font-size:.85rem;cursor:pointer;margin-top:14px}
+.reset:hover{color:var(--text);border-color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Remote Work Signup Tracker</h1>
+  <p class="lead">The 13 platforms from that "paid daily" list, with what each one <em>actually</em> is, what it really requires, and how fast money realistically arrives. Your progress saves in this browser.</p>
+
+  <div class="progress-wrap">
+    <div class="progress-top">
+      <strong id="pcount">0 of 13 started</strong>
+      <span id="pdetail">Pick the green "Days" ones first — they pay soonest.</span>
+    </div>
+    <div class="bar"><i id="pbar"></i></div>
+  </div>
+
+  <h2>Gather this once, before you start</h2>
+  <div class="prep">
+    <p>Nearly every platform below asks for the same things. Having them ready turns each signup from 40 minutes into 10.</p>
+    <ul id="preplist">
+      <li><input type="checkbox" id="p1"><label for="p1">Government photo ID<span class="why">Scanned or photographed, all four corners visible</span></label></li>
+      <li><input type="checkbox" id="p2"><label for="p2">SSN / tax info<span class="why">W-9 for contractor gigs, W-4 for the W-2 jobs</span></label></li>
+      <li><input type="checkbox" id="p3"><label for="p3">PayPal account<span class="why">Rev, Clickworker, Swagbucks and others pay out here</span></label></li>
+      <li><input type="checkbox" id="p4"><label for="p4">Bank account + routing number<span class="why">Direct deposit for the payroll-based ones</span></label></li>
+      <li><input type="checkbox" id="p5"><label for="p5">Résumé, one page<span class="why">Kelly Connect, Gaggle, NexRep, Omni all want one</span></label></li>
+      <li><input type="checkbox" id="p6"><label for="p6">Wired USB headset<span class="why">Every phone-based role rejects Bluetooth</span></label></li>
+      <li><input type="checkbox" id="p7"><label for="p7">Hardwired ethernet + speed test<span class="why">Call center roles disqualify Wi-Fi-only setups</span></label></li>
+      <li><input type="checkbox" id="p8"><label for="p8">Quiet, enclosed room<span class="why">Some require a photo of the workspace</span></label></li>
+      <li><input type="checkbox" id="p9"><label for="p9">A separate email for signups<span class="why">These lists generate heavy marketing mail</span></label></li>
+      <li><input type="checkbox" id="p10"><label for="p10">Background-check consent readiness<span class="why">Know your address history for the last 7 years</span></label></li>
+    </ul>
+  </div>
+
+  <h2>The platforms</h2>
+  <div class="filters" id="filters">
+    <button data-f="all" aria-pressed="true">All 13</button>
+    <button data-f="fast" aria-pressed="false">Money in days</button>
+    <button data-f="notest" aria-pressed="false">No test or interview</button>
+    <button data-f="skill" aria-pressed="false">Pays real rates</button>
+    <button data-f="caution" aria-pressed="false">Read carefully first</button>
+  </div>
+  <div class="grid" id="grid"></div>
+
+  <p class="note">
+    Realistic framing: the microtask sites (Swagbucks, Paidwork, Clickworker) pay somewhere in the low single-digit dollars per hour and are best treated as pocket change, not income. The call-center roles (Kelly Connect, NexRep, Omni, Arise) are where steady hours live, but they take one to four weeks of screening and onboarding before a first shift. The skilled work (Toptal, Preply, Rev, transcription) pays meaningfully more per hour but gates you behind a real test. Applying to several at once is the right move, because acceptance is never guaranteed on any single one.
+    <br><br>
+    Requirements, rates, and payout schedules change and vary by country. Always confirm on the official site before committing time or money. Nothing here is financial or legal advice.
+    <button class="reset" id="reset">Clear all saved progress</button>
+  </p>
+</main>
+
+<script>
+const SITES = [
+  {
+    name:"Rev", url:"https://www.rev.com/freelancers", kind:"Transcription & captions",
+    speed:"Days", tags:["fast","skill"],
+    desc:"Transcribe audio and caption video on your own schedule. The highest-quality option among the genuinely fast-paying sites here.",
+    apply:"Grammar quiz, then a graded transcription sample",
+    pay:"Per audio minute, weekly to PayPal",
+    time:"A few hours to apply; work available as soon as you pass",
+    flag:"Pay is per <em>audio</em> minute, not per hour worked. Beginners often spend 4–6 minutes transcribing each audio minute, so early effective rates are low until you get fast."
+  },
+  {
+    name:"Clickworker", url:"https://www.clickworker.com", kind:"Microtasks & AI data",
+    speed:"Days", tags:["fast","notest"],
+    desc:"Short tasks: categorizing data, writing snippets, checking search results, recording voice clips for AI training sets.",
+    apply:"Profile plus small qualification assessments per task type",
+    pay:"Per task, weekly payouts once you clear the threshold",
+    time:"Sign up in under an hour; assessments unlock better-paying work",
+    flag:"Task availability is inconsistent. The well-paid batches get claimed within minutes, so earnings depend heavily on when you check."
+  },
+  {
+    name:"Swagbucks", url:"https://www.swagbucks.com", kind:"Rewards & surveys",
+    speed:"Days", tags:["fast","notest"],
+    desc:"Surveys, offers, and cashback that convert to gift cards or PayPal. The lowest-effort entry on the list, and the lowest-paying.",
+    apply:"Email signup only",
+    pay:"Points to gift cards or PayPal at set thresholds",
+    time:"Earning within minutes",
+    flag:"Realistically a few dollars per hour at best. Surveys frequently disqualify you partway through with no compensation for the time already spent."
+  },
+  {
+    name:"Paidwork", url:"https://www.paidwork.com", kind:"Microtasks & surveys",
+    speed:"Days", tags:["fast","notest","caution"],
+    desc:"App-based tasks, surveys, and referral earnings, positioned as instant-payout gig work.",
+    apply:"Email signup only",
+    pay:"Per task, with payout minimums",
+    time:"Immediate",
+    flagHard:"Far less established than the others here and heavily referral-driven. Read the payout terms and minimum thresholds before investing real time, and never pay a fee to unlock earnings."
+  },
+  {
+    name:"TaskRabbit", url:"https://www.taskrabbit.com/become-a-tasker", kind:"Local in-person gigs",
+    speed:"1–2 weeks", tags:["skill"],
+    desc:"In-person local jobs: furniture assembly, moving help, mounting, hauling, general handyman work. Not remote.",
+    apply:"ID verification, background check, and a registration fee in most markets",
+    pay:"You set your hourly rate; released after task completion",
+    time:"About a week for background check clearance",
+    flag:"Only operates in supported metro areas — check yours before starting. There is an upfront registration fee, and you need your own tools and transportation."
+  },
+  {
+    name:"Preply", url:"https://preply.com/en/teach", kind:"Online tutoring",
+    speed:"1–3 weeks", tags:["skill"],
+    desc:"Tutor languages or academic subjects to students worldwide. You set your own rate and schedule.",
+    apply:"Profile, video introduction, and description of your subject expertise",
+    pay:"Per lesson, minus platform commission, withdrawn after a hold period",
+    time:"Approval in days, but building a student base takes weeks",
+    flag:"The platform takes a substantial commission that starts high and decreases only as you accumulate teaching hours. Your first lesson with each new student is often unpaid or heavily discounted."
+  },
+  {
+    name:"Transcription Hub", url:"https://www.transcriptionhub.com", kind:"Transcription",
+    speed:"1–2 weeks", tags:["skill"],
+    desc:"Transcription work across general, legal, and medical categories for a transcription services company.",
+    apply:"Application plus a transcription accuracy test",
+    pay:"Per audio minute or per file, on the company's schedule",
+    time:"Test turnaround of several days to a couple of weeks",
+    flag:"Smaller operation with less predictable work volume than Rev. Reasonable as a second transcription source, weak as a primary one."
+  },
+  {
+    name:"Kelly Connect", url:"https://www.kellyservices.us", kind:"Remote call center (W-2)",
+    speed:"2–4 weeks", tags:["skill"],
+    desc:"Remote customer and technical support through Kelly Services, a long-established staffing firm. Actual W-2 employment with benefits on many contracts.",
+    apply:"Job application, interview, background check, drug screen on some contracts",
+    pay:"Hourly, on a standard payroll cycle",
+    time:"Two to four weeks from application to first shift",
+    flag:"Genuinely the most stable option on this list, but nothing about it is same-day. Fixed shift schedules, not flexible hours."
+  },
+  {
+    name:"NexRep", url:"https://www.nexrep.com", kind:"Remote call center (1099)",
+    speed:"2–4 weeks", tags:["skill"],
+    desc:"Contractor-based inbound sales and customer service across a marketplace of client programs. You pick your own hours in blocks.",
+    apply:"Application, assessment, background check, unpaid certification period",
+    pay:"Hourly or commission depending on program, on a regular contractor cycle",
+    time:"Several weeks including certification",
+    flag:"Certification training is typically unpaid, and as a 1099 contractor you cover your own taxes and equipment. Budget for both."
+  },
+  {
+    name:"Omni Interactions", url:"https://omniinteractions.com", kind:"Gig call center (1099)",
+    speed:"2–4 weeks", tags:["skill"],
+    desc:"Contractor customer service where you claim shift blocks from client programs, with more schedule flexibility than a traditional call center.",
+    apply:"Application, background check, equipment check, paid or unpaid certification by program",
+    pay:"Hourly per program, on a regular contractor cycle",
+    time:"Several weeks including certification",
+    flag:"Available hours fluctuate with client demand. Strict equipment requirements — hardwired internet and a wired headset are non-negotiable."
+  },
+  {
+    name:"Gaggle", url:"https://www.gaggle.net/careers", kind:"Content safety review",
+    speed:"2–4 weeks", tags:["skill","caution"],
+    desc:"Not a gig site. Gaggle is a student-safety software company for K-12 schools; the remote role is reviewing content their system flags in student accounts.",
+    apply:"Standard job application, interview, background check",
+    pay:"Hourly, on a standard payroll cycle",
+    time:"Standard hiring timeline of several weeks",
+    flagHard:"You will read flagged student material involving self-harm, abuse, and violence. This is real content-moderation work with a genuine psychological toll. Go in knowing that."
+  },
+  {
+    name:"Toptal", url:"https://www.toptal.com/talent/apply", kind:"Elite freelance network",
+    speed:"1–2 months", tags:["skill","caution"],
+    desc:"High-end freelance network for experienced software engineers, designers, and finance professionals. The highest rates on this list by a wide margin.",
+    apply:"Multi-stage: language screen, timed technical test, live problem-solving interview, then a full test project",
+    pay:"Client contract rates, typically invoiced on a monthly or biweekly cycle",
+    time:"Two to five weeks of screening, unpaid throughout",
+    flagHard:"Acceptance is in the low single-digit percentages and requires years of professional experience. Excellent if you already have that background; a waste of weeks if you don't."
+  },
+  {
+    name:"Arise", url:"https://www.arise.com", kind:"Call center business partner",
+    speed:"1–2 months", tags:["caution"],
+    desc:"Not a job. You register your own business entity and contract it to Arise as a service partner, then service client programs through it.",
+    apply:"Register a business, background check, then purchase and pass client certification courses",
+    pay:"Invoiced per program, typically twice monthly",
+    time:"A month or more, with costs incurred before any earnings",
+    flagHard:"The only entry here that can cost you money before it pays you. You pay for certification courses, equipment, and business registration up front, with no guaranteed hours afterward. Research this one thoroughly before spending anything."
+  }
+];
+
+const STATUSES = ["Not started","Researching","Applied","In screening / testing","Approved — working","Rejected / passed on it"];
+const KEY = "rw-tracker-v1";
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } };
+const save = s => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e){} };
+let state = load();
+
+const grid = document.getElementById("grid");
+const speedClass = s => s === "Days" ? "s-fast" : (s.includes("month") ? "s-slow" : "s-mid");
+
+function render(){
+  grid.innerHTML = "";
+  SITES.forEach((s, i) => {
+    const st = state["site"+i] || STATUSES[0];
+    const card = document.createElement("article");
+    card.className = "card" + (st === "Approved — working" ? " done" : "") +
+      (st === "Rejected / passed on it" ? " out" : "");
+    card.dataset.tags = s.tags.join(" ");
+
+    const flagHtml = s.flagHard ? '<div class="flag hard">' + s.flagHard + '</div>'
+                   : s.flag ? '<div class="flag">' + s.flag + '</div>' : "";
+
+    card.innerHTML =
+      '<div class="card-head"><div>' +
+        '<h3><a href="' + s.url + '" target="_blank" rel="noopener noreferrer">' + s.name + '</a></h3>' +
+        '<div class="kind">' + s.kind + '</div>' +
+      '</div><div class="speed ' + speedClass(s.speed) + '">' + s.speed + '</div></div>' +
+      '<p class="desc">' + s.desc + '</p>' +
+      '<dl>' +
+        '<div><dt>To get in</dt><dd>' + s.apply + '</dd></div>' +
+        '<div><dt>How it pays</dt><dd>' + s.pay + '</dd></div>' +
+        '<div><dt>Timeline</dt><dd>' + s.time + '</dd></div>' +
+      '</dl>' + flagHtml +
+      '<div class="status">' +
+        '<select data-i="' + i + '" aria-label="Status for ' + s.name + '">' +
+          STATUSES.map(o => '<option' + (o === st ? " selected" : "") + '>' + o + '</option>').join("") +
+        '</select>' +
+        '<a class="go" href="' + s.url + '" target="_blank" rel="noopener noreferrer">Open</a>' +
+      '</div>';
+    grid.appendChild(card);
+  });
+  applyFilter();
+  updateProgress();
+}
+
+function updateProgress(){
+  let started = 0, working = 0;
+  SITES.forEach((s,i) => {
+    const st = state["site"+i];
+    if (st && st !== STATUSES[0]) started++;
+    if (st === "Approved — working") working++;
+  });
+  document.getElementById("pcount").textContent = started + " of " + SITES.length + " started";
+  document.getElementById("pbar").style.width = (started / SITES.length * 100) + "%";
+  document.getElementById("pdetail").textContent = working > 0
+    ? working + (working === 1 ? " platform" : " platforms") + " earning"
+    : "Pick the green “Days” ones first — they pay soonest.";
+}
+
+grid.addEventListener("change", e => {
+  if (e.target.tagName !== "SELECT") return;
+  state["site" + e.target.dataset.i] = e.target.value;
+  save(state);
+  render();
+});
+
+let filter = "all";
+function applyFilter(){
+  [...grid.children].forEach(c => {
+    c.style.display = (filter === "all" || c.dataset.tags.split(" ").includes(filter)) ? "" : "none";
+  });
+}
+document.getElementById("filters").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f;
+  [...e.currentTarget.children].forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  applyFilter();
+});
+
+document.querySelectorAll("#preplist input").forEach(box => {
+  box.checked = !!state[box.id];
+  box.addEventListener("change", () => { state[box.id] = box.checked; save(state); });
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Clear all saved statuses and checkboxes?")) return;
+  state = {}; save(state);
+  document.querySelectorAll("#preplist input").forEach(b => b.checked = false);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
